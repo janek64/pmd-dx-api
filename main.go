@@ -3,8 +3,11 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/janek64/pmd-dx-api/api/db"
 )
 
 // getEnv returns a value from the environment or a default value if it is not defined.
@@ -17,6 +20,21 @@ func getEnv(key string, defaultValue string) string {
 }
 
 func main() {
+	// Setup the database connection pool
+	err := db.InitDB()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	// Close the connection poll when exiting the program
+	defer func() {
+		err = db.CloseDB()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to close database connection pool: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
 	// Get port from environment
 	port := getEnv("PORT", "3000")
 
