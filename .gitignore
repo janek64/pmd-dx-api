@@ -1,0 +1,8 @@
+# Ignore environment file
+.env
+
+# Generated binary executable
+.exe
+
+# Exclude docs (temporary)
+docs
