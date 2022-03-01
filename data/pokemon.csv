@@ -1,0 +1,13 @@
+dex_number,pokemon_name,evolution_stage,evolve_condition,evolve_level,crystal_count,classification,camp_ID
+1,Bulbasaur,1,level,16,,Seed Pokemon,1
+2,Ivysaur,2,level,32,,Seed Pokemon,1
+3,Venusaur,3,no_evolve,,,Seed Pokemon,1
+4,Charmander,1,level,16,,Lizard Pokemon,2
+5,Charmeleon,2,level,36,,Flame Pokemon,2
+6,Charizard,3,no_evolve,,,Flame Pokemon,2
+7,Squirtle,1,level,16,,Tiny Turtle Pokemon,3
+8,Wartortle,2,level,36,,Turtle Pokemon,3
+9,Blastoise,3,no_evolve,,,Shellfish Pokemon,3
+10,Caterpie,1,level,7,,Worm Pokemon,4
+11,Metapod,2,level,10,,Cocoon Pokemon,4
+12,Butterfree,3,no_evolve,,,Butterfly Pokemon,4

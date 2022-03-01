@@ -1,0 +1,10 @@
+dungeon_ID,dungeon_name,levels,start_level,team_size,items_allowed,pokemon_joining,map_visible
+1,Joyous Tower,99,5,3,false,true,false
+2,Fiery Field,30,,3,true,true,false
+3,Mt. Faraway,60,,3,true,true,false
+4,Waterfall Pond,19,,3,true,true,false
+5,Murky Cave,19,,3,true,true,false
+6,Northwind Field,30,,3,true,true,false
+7,Purity Forest,99,5,1,false,true,false
+8,Pitfall Valley,25,,3,true,true,false
+9,Howling Forest,15,,3,true,true,false

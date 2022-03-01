@@ -1,0 +1,5 @@
+learns_ID,dex_number,move_ID,learn_type,cost,level
+1,1,1,level,,1
+2,1,2,level,,3
+3,1,3,level,,7
+4,1,4,level,,13

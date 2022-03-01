@@ -1,0 +1,7 @@
+ability_ID,ability_name,description
+1,Overgrow,"When the Pokemon's HP is low, the power of Grass-type moves goes up."
+2,Blaze,"When the Pokemon's HP is low, the power of Fire-type moves goes up."
+3,Torrent,"When the Pokemon's HP is low, the power of Water-type moves goes up."
+4,Shield Dust,This Ability blocks additional effects when the Pokemon is hit by an attacking move.
+5,Shed Skin,This Ability sometimes cures every bad status condition the Pokemon has
+6,Compound Eyes,The Pokemon's accuracy goes up.

@@ -1,0 +1,30 @@
+attacker,defender,interaction
+1,5,not very effective
+1,8,not very effective
+1,7,not effective
+2,1,super effective
+2,5,super effective
+2,8,super effective
+2,14,super effective
+2,17,super effective
+2,18,not very effective
+2,3,not very effective
+2,13,not very effective
+2,16,not very effective
+2,6,not very effective
+2,7,not effective
+3,11,super effective
+3,16,super effective
+3,4,not very effective
+3,13,not very effective
+3,5,not very effective
+3,7,not very effective
+3,8,not effective
+4,9,super effective
+4,12,super effective
+4,3,super effective
+4,5,super effective
+4,8,super effective
+4,6,not very effective
+4,11,not very effective
+4,18,not effective

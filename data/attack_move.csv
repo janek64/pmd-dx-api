@@ -1,0 +1,5 @@
+move_ID,move_name,category,move_range,target,initial_pp,initial_power,accuracy,description,type_ID
+1,Tackle,Physical,Front,Enemy,25,0,0,It damages an enemy.,1
+2,Growl,Status,Entire room,Enemy,0,0,0,It lowers the Attack of enemies in the same room.,1
+3,Vine Whip,Physical,2 tiles away,Enemy,17,0,0,It damages an enemy. It reaches up to 2 tiles away.,11
+4,Poison Powder,Status,Front,Enemy,0,0,0,It makes an enemy Poisoned. But it has no effect on Grass-type Pokemon.,3
