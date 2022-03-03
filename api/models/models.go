@@ -50,6 +50,47 @@ func (n *NullInt64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Int64)
 }
 
+// AttackMove represents an attack_move entry from the database
+type AttackMove struct {
+	MoveID       int
+	MoveName     string
+	Category     string
+	MoveRange    string
+	Target       string
+	InitialPP    int
+	InitialPower int
+	Accuracy     int
+	Description  string
+}
+
+// Ability represents an ability entry from the database
+type Ability struct {
+	AbilityID   int
+	AbilityName string
+	Description string
+}
+
+// Camp represents a camp entry from the database
+type Camp struct {
+	CampID      int
+	CampName    string
+	UnlockType  string
+	Cost        NullInt64
+	Description string
+}
+
+// Dungeon represents a dungeon entry from the database
+type Dungeon struct {
+	DungeonID      int
+	DungeonName    string
+	Levels         int
+	StartLevel     NullInt64
+	TeamSize       int
+	ItemsAllowed   bool
+	PokemonJoining bool
+	MapVisible     bool
+}
+
 // Pokemon represents a pokemon entry from the database
 type Pokemon struct {
 	DexNumber       int
@@ -60,4 +101,50 @@ type Pokemon struct {
 	EvolveCrystals  NullInt64
 	Classification  string
 	CampID          int
+}
+
+// PokemonType represents a pokemon_type entry from the database
+type PokemonType struct {
+	TypeID   int
+	TypeName string
+}
+
+//NamedResource is a short representation of an API resource with its name and URL
+type NamedResource struct {
+	Name string
+	URL  string
+}
+
+//DungeonPokemon is a short representation of a pokemon appearing in a dungeon
+type DungeonPokemon struct {
+	Pokemon NamedResource
+	IsSuper bool
+}
+
+//MovePokemon is a short representation of a pokemon learning a move
+type MovePokemon struct {
+	Pokemon NamedResource
+	Method  string
+	Level   NullInt64
+	Cost    NullInt64
+}
+
+//PokemonDungeon is a short representation of a dungeon a pokemon appears in
+type PokemonDungeon struct {
+	Dungeon NamedResource
+	IsSuper bool
+}
+
+//PokemonMove is a short representation of a move learned by a pokemon
+type PokemonMove struct {
+	Move   NamedResource
+	Method string
+	Level  NullInt64
+	Cost   NullInt64
+}
+
+//TypeInteraction represents an interaction of a type attacking another type
+type TypeInteraction struct {
+	Defender    NamedResource
+	Interaction string
 }
