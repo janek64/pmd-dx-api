@@ -50,13 +50,14 @@ func (n *NullInt64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Int64)
 }
 
+// Pokemon represents a pokemon entry from the database
 type Pokemon struct {
-	Dex_number       int
-	Pokemon_name     string
-	Evolution_stage  int
-	Evolve_condition string
-	Evolve_level     NullInt64
-	Crystal_count    NullInt64
-	Classification   string
-	Camp_ID          int
+	DexNumber       int
+	PokemonName     string
+	EvolutionStage  int
+	EvolveCondition string
+	EvolveLevel     NullInt64
+	EvolveCrystals  NullInt64
+	Classification  string
+	CampID          int
 }

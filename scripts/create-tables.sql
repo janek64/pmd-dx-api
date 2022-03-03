@@ -37,7 +37,7 @@ CREATE TABLE pokemon (
   evolution_stage smallint,
   evolve_condition evolve_condition NOT NULL,
   evolve_level smallint,
-  crystal_count smallint,
+  evolve_crystals smallint,
   classification varchar(50) NOT NULL
 );
 

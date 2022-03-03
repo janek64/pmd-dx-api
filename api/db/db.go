@@ -72,8 +72,8 @@ func TestQuery() error {
 	// Test query
 	var p models.Pokemon
 	err := dbpool.QueryRow(context.Background(), "SELECT * FROM pokemon").Scan(
-		&p.Dex_number, &p.Pokemon_name, &p.Evolution_stage, &p.Evolve_condition,
-		&p.Evolve_level, &p.Crystal_count, &p.Classification, &p.Camp_ID,
+		&p.DexNumber, &p.PokemonName, &p.EvolutionStage, &p.EvolveCondition,
+		&p.EvolveLevel, &p.EvolveCrystals, &p.Classification, &p.CampID,
 	)
 	if err != nil {
 		return err

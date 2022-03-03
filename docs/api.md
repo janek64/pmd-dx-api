@@ -167,12 +167,12 @@ Returns data about a single dungeon.
 | itemsAllowed   |                                                            | Boolean                 |
 | pokemonJoining |                                                            | Boolean                 |
 | mapVisible     |                                                            | Boolean                 |
-| pokemon        |                                                            | Array\<PokemonDungeon\> |
+| pokemon        |                                                            | Array\<DungeonPokemon\> |
 
-#### **PokemonDungeon**
+#### **DungeonPokemon**
 | Name        | Description                                                | Type              |
 | ----------- | ---------------------------------------------------------- | ------------------|
-| dungeon     |                                                            | \<NamedResource\> |
+| pokemon     |                                                            | \<NamedResource\> |
 | isSuper     |                                                            | Boolean           |
 
 ## Moves
@@ -284,11 +284,9 @@ Returns data about a single pokemon.
   "name": "<pokemon-name>",
   "classification": "<classification>",
   "evolutionStage": <stage-number>,
-  "evolve": {
-    "condition": "<evolve-condition>",
-    "level": <evolve-level>,
-    "crystals": <number of crystals>
-  },
+  "evolveCondition": "<evolve-condition>",
+  "evolveLevel": <evolve-level>,
+  "evolveCrystals": <number of crystals>,
   "camp": {
     "name": "<camp-name>",
     "url": "<instance-url>/camps/<camp-id>"
@@ -329,26 +327,21 @@ Returns data about a single pokemon.
 ```
 
 #### **Pokemon**
-| Name           | Description                                                | Type                    |
-| -------------- | ---------------------------------------------------------- | ----------------------- |
-| id             |                                                            | Integer                 |
-| name           |                                                            | String                  |
-| classification |                                                            | String                  |
-| evolutionStage |                                                            | Integer                 |
-| evolve         |                                                            | PokemonEvolve           |
-| camp           |                                                            | NamedResource           |
-| abilities      |                                                            | Array\<NamedResource\>  | 
-| dungeons       |                                                            | Array\<PokemonDungeon\> |
-| moves          |                                                            | Array\<PokemonMove\>    |
-| types          |                                                            | Array\<NamedResource\>  |
+| Name            | Description                                                | Type                    |
+| --------------- | ---------------------------------------------------------- | ----------------------- |
+| id              |                                                            | Integer                 |
+| name            |                                                            | String                  |
+| classification  |                                                            | String                  |
+| evolutionStage  |                                                            | Integer                 |
+| evolveCondition |                                                            | String                  |
+| evolveLevel     |                                                            | Integer                 |
+| evolveCrystals  |                                                            | Integer                 |
+| camp            |                                                            | NamedResource           |
+| abilities       |                                                            | Array\<NamedResource\>  | 
+| dungeons        |                                                            | Array\<PokemonDungeon\> |
+| moves           |                                                            | Array\<PokemonMove\>    |
+| types           |                                                            | Array\<NamedResource\>  |
 
-
-#### **PokemonEvolve**
-| Name        | Description                                                | Type          |
-| ----------- | ---------------------------------------------------------- | ------------- |
-| condition   |                                                            | String        |
-| level       |                                                            | Integer       |
-| crystals    |                                                            | Integer       |
 
 #### **PokemonDungeon**
 | Name        | Description                                                | Type              |
@@ -392,7 +385,7 @@ Returns data about a single type.
   "name": "<type-name>",
   "interactions": [
     {
-      "type": {
+      "defender": {
         "name": "<type-name>",
         "url": "<instance-url>/types/<type-id>"
       },
@@ -411,5 +404,5 @@ Returns data about a single type.
 #### **TypeInteraction**
 | Name        | Description                                                | Type              |
 | ----------- | ---------------------------------------------------------- | ------------------|
-| type        |                                                            | \<NamedResource\> |
+| defender    |                                                            | \<NamedResource\> |
 | interaction |                                                            | String            |
