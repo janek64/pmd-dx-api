@@ -9,6 +9,7 @@ import (
 
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
+	"github.com/julienschmidt/httprouter"
 )
 
 // getEnv returns a value from the environment or a default value if it is not defined.
@@ -39,18 +40,18 @@ func main() {
 	// Get port from environment
 	port := getEnv("PORT", "3000")
 
-	// Create a new ServeMux that will handle requests
-	mux := http.NewServeMux()
+	// Create a new httprouter that will handle requests
+	router := httprouter.New()
 
 	// Register all handlers
-	mux.HandleFunc("/v1/abilities", handler.AbilityListHandler)
-	mux.HandleFunc("/v1/camps", handler.CampListHandler)
-	mux.HandleFunc("/v1/dungeons", handler.DungeonListHandler)
-	mux.HandleFunc("/v1/moves", handler.MoveListHandler)
-	mux.HandleFunc("/v1/pokemon", handler.PokemonListHandler)
-	mux.HandleFunc("/v1/types", handler.PokemonTypeListHandler)
+	router.GET("/v1/abilities", handler.AbilityListHandler)
+	router.GET("/v1/camps", handler.CampListHandler)
+	router.GET("/v1/dungeons", handler.DungeonListHandler)
+	router.GET("/v1/moves", handler.MoveListHandler)
+	router.GET("/v1/pokemon", handler.PokemonListHandler)
+	router.GET("/v1/types", handler.PokemonTypeListHandler)
 
-	// Start the server with the created ServeMux and specified port
+	// Start the server with the created router and specified port
 	fmt.Printf("pmd-dx-api listening on port %v", port)
-	http.ListenAndServe(":"+port, mux)
+	http.ListenAndServe(":"+port, router)
 }

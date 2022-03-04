@@ -8,6 +8,7 @@ import (
 
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/models"
+	"github.com/julienschmidt/httprouter"
 )
 
 // listResponse defines the JSON structure for lists of API resources
@@ -37,7 +38,7 @@ func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL str
 }
 
 // AbilityListHandler handles requests on '/v1/abilities' and returns a list of all ability resources.
-func AbilityListHandler(w http.ResponseWriter, r *http.Request) {
+func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	abilities, err := db.GetAbilities()
 	if err != nil {
@@ -48,7 +49,7 @@ func AbilityListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // CampListHandler handles requests on '/v1/camps' and returns a list of all camp resources.
-func CampListHandler(w http.ResponseWriter, r *http.Request) {
+func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	camps, err := db.GetCamps()
 	if err != nil {
@@ -59,7 +60,7 @@ func CampListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // DungeonListHandler handles requests on '/v1/dungeons' and returns a list of all dungeon resources.
-func DungeonListHandler(w http.ResponseWriter, r *http.Request) {
+func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	dungeons, err := db.GetDungeons()
 	if err != nil {
@@ -70,7 +71,7 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // MoveListHandler handles requests on '/v1/moves' and returns a list of all move resources.
-func MoveListHandler(w http.ResponseWriter, r *http.Request) {
+func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	moves, err := db.GetMoves()
 	if err != nil {
@@ -81,7 +82,7 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // PokemonListHandler handles requests on '/v1/pokemon' and returns a list of all pokemon resources.
-func PokemonListHandler(w http.ResponseWriter, r *http.Request) {
+func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	pokemon, err := db.GetPokemon()
 	if err != nil {
@@ -92,7 +93,7 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // PokemonTypeListHandler handles requests on '/v1/types' and returns a list of all pokemon type resources.
-func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request) {
+func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
 	pokemonTypes, err := db.GetPokemonTypes()
 	if err != nil {
