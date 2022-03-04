@@ -2,7 +2,7 @@
 .env
 
 # Generated binary executable
-.exe
+*.exe
 
 # Exclude docs (temporary)
 docs/*/

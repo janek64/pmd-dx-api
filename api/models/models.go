@@ -1,4 +1,4 @@
-// Package main contains all data types for database
+// Package models contains all data types for database
 // entries and necessary custom types.
 package models
 
@@ -7,20 +7,21 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
-// NullInt64 - extended custom type of sql.NullInt64
+// NullInt64 - extended custom type of sql.NullInt64.
 type NullInt64 sql.NullInt64
 
 // https://medium.com/aubergine-solutions/how-i-handled-null-possible-values-from-database-rows-in-golang-521fb0ee267
 // https://husobee.github.io/golang/database/2015/06/12/scanner-valuer.html
 
-// Value - Implementation of Valuer from database/sql/driver
+// Value - Implementation of Valuer from database/sql/driver.
 func (n *NullInt64) Value() (driver.Value, error) {
 	return int64(n.Int64), nil
 }
 
-// Scan - Implementation of Scanner from database/sql
+// Scan - Implementation of Scanner from database/sql.
 func (n *NullInt64) Scan(src interface{}) error {
 	// Scan the Input with the database/sql Scan function
 	var i sql.NullInt64
@@ -40,7 +41,7 @@ func (n *NullInt64) Scan(src interface{}) error {
 	return nil
 }
 
-// MarshalJSON - Implementation of Marshaler from encoding/json
+// MarshalJSON - Implementation of Marshaler from encoding/json.
 func (n *NullInt64) MarshalJSON() ([]byte, error) {
 	// If there is a null value, return "null" as output
 	if !n.Valid {
@@ -50,7 +51,7 @@ func (n *NullInt64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Int64)
 }
 
-// AttackMove represents an attack_move entry from the database
+// AttackMove represents an attack_move entry from the database.
 type AttackMove struct {
 	MoveID       int
 	MoveName     string
@@ -63,14 +64,14 @@ type AttackMove struct {
 	Description  string
 }
 
-// Ability represents an ability entry from the database
+// Ability represents an ability entry from the database.
 type Ability struct {
 	AbilityID   int
 	AbilityName string
 	Description string
 }
 
-// Camp represents a camp entry from the database
+// Camp represents a camp entry from the database.
 type Camp struct {
 	CampID      int
 	CampName    string
@@ -79,7 +80,7 @@ type Camp struct {
 	Description string
 }
 
-// Dungeon represents a dungeon entry from the database
+// Dungeon represents a dungeon entry from the database.
 type Dungeon struct {
 	DungeonID      int
 	DungeonName    string
@@ -91,7 +92,7 @@ type Dungeon struct {
 	MapVisible     bool
 }
 
-// Pokemon represents a pokemon entry from the database
+// Pokemon represents a pokemon entry from the database.
 type Pokemon struct {
 	DexNumber       int
 	PokemonName     string
@@ -103,48 +104,60 @@ type Pokemon struct {
 	CampID          int
 }
 
-// PokemonType represents a pokemon_type entry from the database
+// PokemonType represents a pokemon_type entry from the database.
 type PokemonType struct {
 	TypeID   int
 	TypeName string
 }
 
-//NamedResource is a short representation of an API resource with its name and URL
-type NamedResource struct {
+// NamedResourceID is a short representation of an API resource with its name and ID (for URL construction).
+type NamedResourceID struct {
 	Name string
-	URL  string
+	ID   int
 }
 
-//DungeonPokemon is a short representation of a pokemon appearing in a dungeon
+// ToNamedResourceURL returns the named resource with its URL instead of the ID
+func (n *NamedResourceID) ToNamedResourceURL(instanceURL string, resourceTypeName string) NamedResourceURL {
+	url := fmt.Sprintf("%v/v1/%v/%v", instanceURL, resourceTypeName, n.ID)
+	return NamedResourceURL{Name: n.Name, URL: url}
+}
+
+// NamedResourceURL is a short representation of an API resource with its name and URL.
+type NamedResourceURL struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// DungeonPokemon is a short representation of a pokemon appearing in a dungeon.
 type DungeonPokemon struct {
-	Pokemon NamedResource
+	Pokemon NamedResourceID
 	IsSuper bool
 }
 
-//MovePokemon is a short representation of a pokemon learning a move
+// MovePokemon is a short representation of a pokemon learning a move.
 type MovePokemon struct {
-	Pokemon NamedResource
+	Pokemon NamedResourceID
 	Method  string
 	Level   NullInt64
 	Cost    NullInt64
 }
 
-//PokemonDungeon is a short representation of a dungeon a pokemon appears in
+// PokemonDungeon is a short representation of a dungeon a pokemon appears in.
 type PokemonDungeon struct {
-	Dungeon NamedResource
+	Dungeon NamedResourceID
 	IsSuper bool
 }
 
-//PokemonMove is a short representation of a move learned by a pokemon
+// PokemonMove is a short representation of a move learned by a pokemon.
 type PokemonMove struct {
-	Move   NamedResource
+	Move   NamedResourceID
 	Method string
 	Level  NullInt64
 	Cost   NullInt64
 }
 
-//TypeInteraction represents an interaction of a type attacking another type
+// TypeInteraction represents an interaction of a type attacking another type.
 type TypeInteraction struct {
-	Defender    NamedResource
+	Defender    NamedResourceID
 	Interaction string
 }

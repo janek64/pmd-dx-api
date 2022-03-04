@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/janek64/pmd-dx-api/api/models"
 )
 
 // Type for DB connection error
@@ -62,22 +61,5 @@ func CloseDB() error {
 		return errors.New("no connection pool to close")
 	}
 	dbpool.Close()
-	return nil
-}
-
-func TestQuery() error {
-	if dbpool == nil {
-		return errors.New("no database connection pool")
-	}
-	// Test query
-	var p models.Pokemon
-	err := dbpool.QueryRow(context.Background(), "SELECT * FROM pokemon").Scan(
-		&p.DexNumber, &p.PokemonName, &p.EvolutionStage, &p.EvolveCondition,
-		&p.EvolveLevel, &p.EvolveCrystals, &p.Classification, &p.CampID,
-	)
-	if err != nil {
-		return err
-	}
-	fmt.Println(p)
 	return nil
 }
