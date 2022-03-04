@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/janek64/pmd-dx-api/api/db"
+	"github.com/janek64/pmd-dx-api/api/handler"
 )
 
 // getEnv returns a value from the environment or a default value if it is not defined.
@@ -26,7 +27,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	// Close the connection poll when exiting the program
+	// Close the connection pool when exiting the program
 	defer func() {
 		err = db.CloseDB()
 		if err != nil {
@@ -41,6 +42,15 @@ func main() {
 	// Create a new ServeMux that will handle requests
 	mux := http.NewServeMux()
 
+	// Register all handlers
+	mux.HandleFunc("/v1/abilities", handler.AbilityListHandler)
+	mux.HandleFunc("/v1/camps", handler.CampListHandler)
+	mux.HandleFunc("/v1/dungeons", handler.DungeonListHandler)
+	mux.HandleFunc("/v1/moves", handler.MoveListHandler)
+	mux.HandleFunc("/v1/pokemon", handler.PokemonListHandler)
+	mux.HandleFunc("/v1/types", handler.PokemonTypeListHandler)
+
 	// Start the server with the created ServeMux and specified port
+	fmt.Printf("pmd-dx-api listening on port %v", port)
 	http.ListenAndServe(":"+port, mux)
 }
