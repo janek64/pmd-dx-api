@@ -45,6 +45,7 @@ func main() {
 
 	// Register all handlers
 	router.GET("/v1/abilities", handler.AbilityListHandler)
+	router.GET("/v1/abilities/:searcharg", handler.AbilitySearchHandler)
 	router.GET("/v1/camps", handler.CampListHandler)
 	router.GET("/v1/dungeons", handler.DungeonListHandler)
 	router.GET("/v1/moves", handler.MoveListHandler)
