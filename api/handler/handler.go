@@ -40,23 +40,10 @@ func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL str
 	w.Write(json)
 }
 
-// AbilityListHandler handles requests on '/v1/abilities' and returns a list of all ability resources.
-func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// Fetch the ability list from the database
-	abilities, err := db.GetAbilities()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(abilities, r.Host, "abilities", w)
-}
-
-// AbilityListHandler handles requests on '/v1/abilities/:searcharg' and returns information about the resource.
-func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// generateSearchInput decides if a db search argument is an ID or a name and generates the corresponding db.SearchInput.
+func generateSearchInput(arg string) db.SearchInput {
 	var searchInput db.SearchInput
 	// Check if the search argument provided is an ID or a name
-	arg := ps.ByName("searcharg")
 	// strconv.Atoi will return an error for non-numeric strings (name)
 	if id, convErr := strconv.Atoi(arg); convErr == nil {
 		searchInput.SearchType = db.ID
@@ -67,6 +54,34 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		// Done on application level because SQL-level transformation disables indexes
 		searchInput.Name = strings.Title(strings.ToLower(arg))
 	}
+	return searchInput
+}
+
+// transformToURLResources transforms a slice of NamedResources with IDs to NamedResources with URLs and returns it.
+func transformToURLResources(resources []models.NamedResourceID, instanceURL string, resourceTypeName string) []models.NamedResourceURL {
+	var resourcesWithURL []models.NamedResourceURL
+	for _, p := range resources {
+		resourcesWithURL = append(resourcesWithURL, p.ToNamedResourceURL(instanceURL, resourceTypeName))
+	}
+	return resourcesWithURL
+}
+
+// AbilityListHandler handles requests on '/v1/abilities' and returns a list of all ability resources.
+func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Fetch the ability list from the database
+	abilities, err := db.GetAbilityList()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Build response JSON with URLs instead of IDs and send it to the client
+	answerWithListJSON(abilities, r.Host, "abilities", w)
+}
+
+// AbilitySearchHandler handles requests on '/v1/abilities/:searcharg' and returns information about the desired ability.
+func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
 	ability, pokemon, err := db.GetAbility(searchInput)
 	if err != nil {
@@ -79,10 +94,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 	// Build representation of the pokemon with URL instead of ID
-	var pokemonWithURL []models.NamedResourceURL
-	for _, p := range pokemon {
-		pokemonWithURL = append(pokemonWithURL, p.ToNamedResourceURL(r.Host, "abilities"))
-	}
+	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
 	// Build the response JSON with an anonymous struct
 	responseJSON := struct {
 		ID          int                       `json:"id"`
@@ -109,7 +121,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 // CampListHandler handles requests on '/v1/camps' and returns a list of all camp resources.
 func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
-	camps, err := db.GetCamps()
+	camps, err := db.GetCampList()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -118,10 +130,54 @@ func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	answerWithListJSON(camps, r.Host, "camps", w)
 }
 
+// CampSearchHandler handles requests on '/v1/camps/:searcharg' and returns information about the desired camp.
+func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
+	// Get the ability from the database
+	camp, pokemon, err := db.GetCamp(searchInput)
+	if err != nil {
+		// If the error is a db.ResourceNotFoundError, return code 404 (not found)
+		if _, ok := err.(*db.ResourceNotFoundError); ok {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	// Build representation of the pokemon with URL instead of ID
+	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
+	// Build the response JSON with an anonymous struct
+	responseJSON := struct {
+		ID          int                       `json:"id"`
+		Name        string                    `json:"name"`
+		Description string                    `json:"description"`
+		UnlockType  string                    `json:"unlockType"`
+		Cost        models.NullInt64          `json:"cost"`
+		Pokemon     []models.NamedResourceURL `json:"pokemon"`
+	}{
+		ID:          camp.CampID,
+		Name:        camp.CampName,
+		Description: camp.Description,
+		UnlockType:  camp.UnlockType,
+		Cost:        camp.Cost,
+		Pokemon:     pokemonWithURL,
+	}
+	// Transform the struct to JSON
+	json, err := json.Marshal(responseJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 // DungeonListHandler handles requests on '/v1/dungeons' and returns a list of all dungeon resources.
 func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
-	dungeons, err := db.GetDungeons()
+	dungeons, err := db.GetDungeonList()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -130,10 +186,63 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	answerWithListJSON(dungeons, r.Host, "dungeons", w)
 }
 
+// DungeonSearchHandler handles requests on '/v1/dungeons/:searcharg' and returns information about the desired dungeon.
+func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
+	// Get the ability from the database
+	dungeon, pokemon, err := db.GetDungeon(searchInput)
+	if err != nil {
+		// If the error is a db.ResourceNotFoundError, return code 404 (not found)
+		if _, ok := err.(*db.ResourceNotFoundError); ok {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	// Build representation of the pokemon with URL instead of ID
+	var pokemonWithURL []models.DungeonPokemonURL
+	for _, p := range pokemon {
+		pokemonWithURL = append(pokemonWithURL, p.ToDungeonPokemonURL(r.Host))
+	}
+	// Build the response JSON with an anonymous struct
+	responseJSON := struct {
+		ID             int                        `json:"id"`
+		Name           string                     `json:"name"`
+		Levels         int                        `json:"levels"`
+		StartLevel     models.NullInt64           `json:"startLevel"`
+		TeamSize       int                        `json:"teamSize"`
+		ItemsAllowed   bool                       `json:"itemsAllowed"`
+		PokemonJoining bool                       `json:"pokemonJoining"`
+		MapVisible     bool                       `json:"mapVisible"`
+		Pokemon        []models.DungeonPokemonURL `json:"pokemon"`
+	}{
+		ID:             dungeon.DungeonID,
+		Name:           dungeon.DungeonName,
+		Levels:         dungeon.Levels,
+		StartLevel:     dungeon.StartLevel,
+		TeamSize:       dungeon.TeamSize,
+		ItemsAllowed:   dungeon.ItemsAllowed,
+		PokemonJoining: dungeon.PokemonJoining,
+		MapVisible:     dungeon.MapVisible,
+		Pokemon:        pokemonWithURL,
+	}
+	// Transform the struct to JSON
+	json, err := json.Marshal(responseJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 // MoveListHandler handles requests on '/v1/moves' and returns a list of all move resources.
 func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
-	moves, err := db.GetMoves()
+	moves, err := db.GetMoveList()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -142,10 +251,67 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	answerWithListJSON(moves, r.Host, "moves", w)
 }
 
+// MoveSearchHandler handles requests on '/v1/moves/:searcharg' and returns information about the desired move.
+func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
+	// Get the ability from the database
+	move, moveType, pokemon, err := db.GetMove(searchInput)
+	if err != nil {
+		// If the error is a db.ResourceNotFoundError, return code 404 (not found)
+		if _, ok := err.(*db.ResourceNotFoundError); ok {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	// Build representation of the pokemon with URL instead of ID
+	var pokemonWithURL []models.MovePokemonURL
+	for _, p := range pokemon {
+		pokemonWithURL = append(pokemonWithURL, p.ToMovePokemonURL(r.Host))
+	}
+	// Build the response JSON with an anonymous struct
+	responseJSON := struct {
+		ID           int                     `json:"id"`
+		Name         string                  `json:"name"`
+		Category     string                  `json:"category"`
+		Range        string                  `json:"range"`
+		Target       string                  `json:"target"`
+		InitialPP    int                     `json:"initialPP"`
+		InitialPower int                     `json:"initialPower"`
+		Accuracy     int                     `json:"accuracy"`
+		Description  string                  `json:"description"`
+		Type         models.NamedResourceURL `json:"type"`
+		Pokemon      []models.MovePokemonURL `json:"pokemon"`
+	}{
+		ID:           move.MoveID,
+		Name:         move.MoveName,
+		Category:     move.Category,
+		Range:        move.Range,
+		Target:       move.Target,
+		InitialPP:    move.InitialPP,
+		InitialPower: move.InitialPower,
+		Accuracy:     move.Accuracy,
+		Description:  move.Description,
+		Type:         moveType.ToNamedResourceURL(r.Host, "moves"),
+		Pokemon:      pokemonWithURL,
+	}
+	// Transform the struct to JSON
+	json, err := json.Marshal(responseJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 // PokemonListHandler handles requests on '/v1/pokemon' and returns a list of all pokemon resources.
 func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
-	pokemon, err := db.GetPokemon()
+	pokemon, err := db.GetPokemonList()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -157,7 +323,7 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 // PokemonTypeListHandler handles requests on '/v1/types' and returns a list of all pokemon type resources.
 func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
-	pokemonTypes, err := db.GetPokemonTypes()
+	pokemonTypes, err := db.GetPokemonTypeList()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

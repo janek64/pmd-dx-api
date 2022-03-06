@@ -56,7 +56,7 @@ type AttackMove struct {
 	MoveID       int
 	MoveName     string
 	Category     string
-	MoveRange    string
+	Range        string
 	Target       string
 	InitialPP    int
 	InitialPower int
@@ -141,8 +141,8 @@ func (d *DungeonPokemonID) ToDungeonPokemonURL(instanceURL string) DungeonPokemo
 
 // DungeonPokemonURL is a short representation of a pokemon appearing in a dungeon with its URL.
 type DungeonPokemonURL struct {
-	Pokemon NamedResourceURL
-	IsSuper bool
+	Pokemon NamedResourceURL `json:"pokemon"`
+	IsSuper bool             `json:"isSuper"`
 }
 
 // MovePokemonID is a short representation of a pokemon learning a move with its ID.
@@ -160,10 +160,10 @@ func (m *MovePokemonID) ToMovePokemonURL(instanceURL string) MovePokemonURL {
 
 // MovePokemonURL is a short representation of a pokemon learning a move with its URL.
 type MovePokemonURL struct {
-	Pokemon NamedResourceURL
-	Method  string
-	Level   NullInt64
-	Cost    NullInt64
+	Pokemon NamedResourceURL `json:"pokemon"`
+	Method  string           `json:"method"`
+	Level   NullInt64        `json:"level"`
+	Cost    NullInt64        `json:"cost"`
 }
 
 // PokemonDungeonID is a short representation of a dungeon a pokemon appears in with its ID.
@@ -179,8 +179,8 @@ func (p *PokemonDungeonID) ToPokemonDungeonURL(instanceURL string) PokemonDungeo
 
 // PokemonDungeonURL is a short representation of a dungeon a pokemon appears in with its URL.
 type PokemonDungeonURL struct {
-	Dungeon NamedResourceURL
-	IsSuper bool
+	Dungeon NamedResourceURL `json:"dungeon"`
+	IsSuper bool             `json:"isSuper"`
 }
 
 // PokemonMoveID is a short representation of a move learned by a pokemon with its ID.
@@ -198,10 +198,10 @@ func (p *PokemonMoveID) ToPokemonMoveURL(instanceURL string) PokemonMoveURL {
 
 // PokemonMoveURL is a short representation of a move learned by a pokemon with its URL.
 type PokemonMoveURL struct {
-	Move   NamedResourceURL
-	Method string
-	Level  NullInt64
-	Cost   NullInt64
+	Move   NamedResourceURL `json:"move"`
+	Method string           `json:"method"`
+	Level  NullInt64        `json:"level"`
+	Cost   NullInt64        `json:"cost"`
 }
 
 // TypeInteractionID represents an interaction of a type attacking another type with its ID.
@@ -217,6 +217,6 @@ func (t *TypeInteractionID) ToTypeInteractionURL(instanceURL string) TypeInterac
 
 // TypeInteractionID represents an interaction of a type attacking another type with its URL.
 type TypeInteractionURL struct {
-	Defender    NamedResourceURL
-	Interaction string
+	Defender    NamedResourceURL `json:"defender"`
+	Interaction string           `json:"interaction"`
 }

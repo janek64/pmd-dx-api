@@ -47,12 +47,15 @@ func main() {
 	router.GET("/v1/abilities", handler.AbilityListHandler)
 	router.GET("/v1/abilities/:searcharg", handler.AbilitySearchHandler)
 	router.GET("/v1/camps", handler.CampListHandler)
+	router.GET("/v1/camps/:searcharg", handler.CampSearchHandler)
 	router.GET("/v1/dungeons", handler.DungeonListHandler)
+	router.GET("/v1/dungeons/:searcharg", handler.DungeonSearchHandler)
 	router.GET("/v1/moves", handler.MoveListHandler)
+	router.GET("/v1/moves/:searcharg", handler.MoveSearchHandler)
 	router.GET("/v1/pokemon", handler.PokemonListHandler)
 	router.GET("/v1/types", handler.PokemonTypeListHandler)
 
 	// Start the server with the created router and specified port
-	fmt.Printf("pmd-dx-api listening on port %v", port)
+	fmt.Printf("pmd-dx-api listening on port %v\n", port)
 	http.ListenAndServe(":"+port, router)
 }
