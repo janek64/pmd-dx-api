@@ -32,9 +32,9 @@ func (n *NullInt64) Scan(src interface{}) error {
 	// Use a type switch to check for nil values
 	switch src.(type) {
 	case nil:
-		n = &NullInt64{i.Int64, false}
+		*n = NullInt64{i.Int64, false}
 	case int64:
-		n = &NullInt64{i.Int64, true}
+		*n = NullInt64{i.Int64, true}
 	default:
 		return errors.New("failed to scan NullInt64")
 	}
@@ -42,7 +42,7 @@ func (n *NullInt64) Scan(src interface{}) error {
 }
 
 // MarshalJSON - Implementation of Marshaler from encoding/json.
-func (n *NullInt64) MarshalJSON() ([]byte, error) {
+func (n NullInt64) MarshalJSON() ([]byte, error) {
 	// If there is a null value, return "null" as output
 	if !n.Valid {
 		return []byte("null"), nil
