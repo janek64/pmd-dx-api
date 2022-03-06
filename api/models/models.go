@@ -116,7 +116,7 @@ type NamedResourceID struct {
 	ID   int
 }
 
-// ToNamedResourceURL returns the named resource with its URL instead of the ID
+// ToNamedResourceURL returns the named resource with its URL instead of the ID.
 func (n *NamedResourceID) ToNamedResourceURL(instanceURL string, resourceTypeName string) NamedResourceURL {
 	url := fmt.Sprintf("%v/v1/%v/%v", instanceURL, resourceTypeName, n.ID)
 	return NamedResourceURL{Name: n.Name, URL: url}
@@ -128,36 +128,95 @@ type NamedResourceURL struct {
 	URL  string `json:"url"`
 }
 
-// DungeonPokemon is a short representation of a pokemon appearing in a dungeon.
-type DungeonPokemon struct {
+// DungeonPokemonID is a short representation of a pokemon appearing in a dungeon with its ID.
+type DungeonPokemonID struct {
 	Pokemon NamedResourceID
 	IsSuper bool
 }
 
-// MovePokemon is a short representation of a pokemon learning a move.
-type MovePokemon struct {
+// ToDungeonPokemonURL returns the DungeonPokemon with its URL instead of the ID.
+func (d *DungeonPokemonID) ToDungeonPokemonURL(instanceURL string) DungeonPokemonURL {
+	return DungeonPokemonURL{Pokemon: d.Pokemon.ToNamedResourceURL(instanceURL, "pokemon"), IsSuper: d.IsSuper}
+}
+
+// DungeonPokemonURL is a short representation of a pokemon appearing in a dungeon with its URL.
+type DungeonPokemonURL struct {
+	Pokemon NamedResourceURL
+	IsSuper bool
+}
+
+// MovePokemonID is a short representation of a pokemon learning a move with its ID.
+type MovePokemonID struct {
 	Pokemon NamedResourceID
 	Method  string
 	Level   NullInt64
 	Cost    NullInt64
 }
 
-// PokemonDungeon is a short representation of a dungeon a pokemon appears in.
-type PokemonDungeon struct {
+// ToMovePokemonURL returns the MovePokemon with its URL instead of the ID.
+func (m *MovePokemonID) ToMovePokemonURL(instanceURL string) MovePokemonURL {
+	return MovePokemonURL{Pokemon: m.Pokemon.ToNamedResourceURL(instanceURL, "pokemon"), Method: m.Method, Level: m.Level, Cost: m.Cost}
+}
+
+// MovePokemonURL is a short representation of a pokemon learning a move with its URL.
+type MovePokemonURL struct {
+	Pokemon NamedResourceURL
+	Method  string
+	Level   NullInt64
+	Cost    NullInt64
+}
+
+// PokemonDungeonID is a short representation of a dungeon a pokemon appears in with its ID.
+type PokemonDungeonID struct {
 	Dungeon NamedResourceID
 	IsSuper bool
 }
 
-// PokemonMove is a short representation of a move learned by a pokemon.
-type PokemonMove struct {
+// ToPokemonDungeonURL returns the PokemonDungeon with its URL instead of the ID.
+func (p *PokemonDungeonID) ToPokemonDungeonURL(instanceURL string) PokemonDungeonURL {
+	return PokemonDungeonURL{Dungeon: p.Dungeon.ToNamedResourceURL(instanceURL, "dungeons"), IsSuper: p.IsSuper}
+}
+
+// PokemonDungeonURL is a short representation of a dungeon a pokemon appears in with its URL.
+type PokemonDungeonURL struct {
+	Dungeon NamedResourceURL
+	IsSuper bool
+}
+
+// PokemonMoveID is a short representation of a move learned by a pokemon with its ID.
+type PokemonMoveID struct {
 	Move   NamedResourceID
 	Method string
 	Level  NullInt64
 	Cost   NullInt64
 }
 
-// TypeInteraction represents an interaction of a type attacking another type.
-type TypeInteraction struct {
+// ToPokemonMoveURL returns the PokemonMove with its URL instead of the ID.
+func (p *PokemonMoveID) ToPokemonMoveURL(instanceURL string) PokemonMoveURL {
+	return PokemonMoveURL{Move: p.Move.ToNamedResourceURL(instanceURL, "moves"), Method: p.Method, Level: p.Level, Cost: p.Cost}
+}
+
+// PokemonMoveURL is a short representation of a move learned by a pokemon with its URL.
+type PokemonMoveURL struct {
+	Move   NamedResourceURL
+	Method string
+	Level  NullInt64
+	Cost   NullInt64
+}
+
+// TypeInteractionID represents an interaction of a type attacking another type with its ID.
+type TypeInteractionID struct {
 	Defender    NamedResourceID
+	Interaction string
+}
+
+// ToTypeInteractionURL returns the TypeInteraction with its URL instead of the ID.
+func (t *TypeInteractionID) ToTypeInteractionURL(instanceURL string) TypeInteractionURL {
+	return TypeInteractionURL{Defender: t.Defender.ToNamedResourceURL(instanceURL, "types"), Interaction: t.Interaction}
+}
+
+// TypeInteractionID represents an interaction of a type attacking another type with its URL.
+type TypeInteractionURL struct {
+	Defender    NamedResourceURL
 	Interaction string
 }
