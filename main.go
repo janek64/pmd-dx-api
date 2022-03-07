@@ -53,7 +53,9 @@ func main() {
 	router.GET("/v1/moves", handler.MoveListHandler)
 	router.GET("/v1/moves/:searcharg", handler.MoveSearchHandler)
 	router.GET("/v1/pokemon", handler.PokemonListHandler)
+	router.GET("/v1/pokemon/:searcharg", handler.PokemonSearchHandler)
 	router.GET("/v1/types", handler.PokemonTypeListHandler)
+	router.GET("/v1/types/:searcharg", handler.PokemonTypeSearchHandler)
 
 	// Start the server with the created router and specified port
 	fmt.Printf("pmd-dx-api listening on port %v\n", port)

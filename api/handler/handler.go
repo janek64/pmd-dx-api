@@ -320,6 +320,74 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	answerWithListJSON(pokemon, r.Host, "pokemon", w)
 }
 
+// PokemonSearchHandler handles requests on '/v1/pokemon/:searcharg' and returns information about the desired pokemon.
+func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
+	// Get the ability from the database
+	pokemon, camp, abilities, dungeons, moves, pokemonTypes, err := db.GetPokemon(searchInput)
+	if err != nil {
+		// If the error is a db.ResourceNotFoundError, return code 404 (not found)
+		if _, ok := err.(*db.ResourceNotFoundError); ok {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	// Build representation of the abilities with URL instead of ID
+	abilitiesWithURL := transformToURLResources(abilities, r.Host, "abilities")
+	// Build representation of the dungeons with URL instead of ID
+	var dungeonsWithURL []models.PokemonDungeonURL
+	for _, d := range dungeons {
+		dungeonsWithURL = append(dungeonsWithURL, d.ToPokemonDungeonURL(r.Host))
+	}
+	// Build representation of the moves with URL instead of ID
+	var movesWithURL []models.PokemonMoveURL
+	for _, m := range moves {
+		movesWithURL = append(movesWithURL, m.ToPokemonMoveURL(r.Host))
+	}
+	// Build representation of the types with URL instead of ID
+	pokemonTypesWithURL := transformToURLResources(pokemonTypes, r.Host, "types")
+	// Build the response JSON with an anonymous struct
+	responseJSON := struct {
+		ID              int                        `json:"id"`
+		Name            string                     `json:"name"`
+		Classification  string                     `json:"classification"`
+		EvolutionStage  int                        `json:"evolutionStage"`
+		EvolveCondition string                     `json:"evolveCondition"`
+		EvolveLevel     models.NullInt64           `json:"evolveLevel"`
+		EvolveCrystals  models.NullInt64           `json:"evolveCrystals"`
+		Camp            models.NamedResourceURL    `json:"camp"`
+		Abilities       []models.NamedResourceURL  `json:"abilities"`
+		Dungeons        []models.PokemonDungeonURL `json:"dungeons"`
+		Moves           []models.PokemonMoveURL    `json:"moves"`
+		Types           []models.NamedResourceURL  `json:"types"`
+	}{
+		ID:              pokemon.DexNumber,
+		Name:            pokemon.PokemonName,
+		Classification:  pokemon.Classification,
+		EvolutionStage:  pokemon.EvolutionStage,
+		EvolveCondition: pokemon.EvolveCondition,
+		EvolveLevel:     pokemon.EvolveLevel,
+		EvolveCrystals:  pokemon.EvolveCrystals,
+		Camp:            camp.ToNamedResourceURL(r.Host, "camps"),
+		Abilities:       abilitiesWithURL,
+		Dungeons:        dungeonsWithURL,
+		Moves:           movesWithURL,
+		Types:           pokemonTypesWithURL,
+	}
+	// Transform the struct to JSON
+	json, err := json.Marshal(responseJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
+}
+
 // PokemonTypeListHandler handles requests on '/v1/types' and returns a list of all pokemon type resources.
 func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Fetch the ability list from the database
@@ -330,4 +398,45 @@ func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
 	answerWithListJSON(pokemonTypes, r.Host, "types", w)
+}
+
+// PokemonTypeSearchHandler handles requests on '/v1/types/:searcharg' and returns information about the desired pokemonType.
+func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Generate the input for the db search
+	searchInput := generateSearchInput(ps.ByName("searcharg"))
+	// Get the ability from the database
+	pokemonType, interactions, err := db.GetPokemonType(searchInput)
+	if err != nil {
+		// If the error is a db.ResourceNotFoundError, return code 404 (not found)
+		if _, ok := err.(*db.ResourceNotFoundError); ok {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	// Build representation of the interactions with URL instead of ID
+	var interactionsWithURL []models.TypeInteractionURL
+	for _, i := range interactions {
+		interactionsWithURL = append(interactionsWithURL, i.ToTypeInteractionURL(r.Host))
+	}
+	// Build the response JSON with an anonymous struct
+	responseJSON := struct {
+		ID           int                         `json:"id"`
+		Name         string                      `json:"name"`
+		Interactions []models.TypeInteractionURL `json:"interactions"`
+	}{
+		ID:           pokemonType.TypeID,
+		Name:         pokemonType.TypeName,
+		Interactions: interactionsWithURL,
+	}
+	// Transform the struct to JSON
+	json, err := json.Marshal(responseJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Write the response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(json)
 }
