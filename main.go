@@ -9,6 +9,7 @@ import (
 
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
+	"github.com/janek64/pmd-dx-api/api/middleware"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -44,17 +45,17 @@ func main() {
 	router := httprouter.New()
 
 	// Register all handlers
-	router.GET("/v1/abilities", handler.AbilityListHandler)
+	router.GET("/v1/abilities", middleware.ResourceListParams(handler.AbilityListHandler))
 	router.GET("/v1/abilities/:searcharg", handler.AbilitySearchHandler)
-	router.GET("/v1/camps", handler.CampListHandler)
+	router.GET("/v1/camps", middleware.ResourceListParams(handler.CampListHandler))
 	router.GET("/v1/camps/:searcharg", handler.CampSearchHandler)
-	router.GET("/v1/dungeons", handler.DungeonListHandler)
+	router.GET("/v1/dungeons", middleware.ResourceListParams(handler.DungeonListHandler))
 	router.GET("/v1/dungeons/:searcharg", handler.DungeonSearchHandler)
-	router.GET("/v1/moves", handler.MoveListHandler)
+	router.GET("/v1/moves", middleware.ResourceListParams(handler.MoveListHandler))
 	router.GET("/v1/moves/:searcharg", handler.MoveSearchHandler)
-	router.GET("/v1/pokemon", handler.PokemonListHandler)
+	router.GET("/v1/pokemon", middleware.ResourceListParams(handler.PokemonListHandler))
 	router.GET("/v1/pokemon/:searcharg", handler.PokemonSearchHandler)
-	router.GET("/v1/types", handler.PokemonTypeListHandler)
+	router.GET("/v1/types", middleware.ResourceListParams(handler.PokemonTypeListHandler))
 	router.GET("/v1/types/:searcharg", handler.PokemonTypeSearchHandler)
 
 	// Start the server with the created router and specified port

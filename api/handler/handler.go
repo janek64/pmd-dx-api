@@ -13,7 +13,19 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// listResponse defines the JSON structure for lists of API resources
+// ContextKey defines alls valid Context keys for requests to this API.
+type ContextKey int
+
+const (
+	ResourceListParamsKey ContextKey = iota
+)
+
+// ResourceListParams contains the parsed parameter values for requests to resource lists.
+type ResourceListParams struct {
+	Sort db.SortInput
+}
+
+// listResponse defines the JSON structure for lists of API resources.
 type listResponse struct {
 	Count   int                       `json:"count"`
 	Results []models.NamedResourceURL `json:"results"`
@@ -49,7 +61,7 @@ func generateSearchInput(arg string) db.SearchInput {
 		searchInput.SearchType = db.ID
 		searchInput.ID = id
 	} else {
-		searchInput.SearchType = db.NAME
+		searchInput.SearchType = db.Name
 		// Convert to lowercase and then to unicode title case
 		// Done on application level because SQL-level transformation disables indexes
 		searchInput.Name = strings.Title(strings.ToLower(arg))
@@ -68,8 +80,14 @@ func transformToURLResources(resources []models.NamedResourceID, instanceURL str
 
 // AbilityListHandler handles requests on '/v1/abilities' and returns a list of all ability resources.
 func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	abilities, err := db.GetAbilityList()
+	abilities, err := db.GetAbilityList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -120,8 +138,14 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 // CampListHandler handles requests on '/v1/camps' and returns a list of all camp resources.
 func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	camps, err := db.GetCampList()
+	camps, err := db.GetCampList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -176,8 +200,14 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 // DungeonListHandler handles requests on '/v1/dungeons' and returns a list of all dungeon resources.
 func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	dungeons, err := db.GetDungeonList()
+	dungeons, err := db.GetDungeonList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -241,8 +271,14 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 // MoveListHandler handles requests on '/v1/moves' and returns a list of all move resources.
 func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	moves, err := db.GetMoveList()
+	moves, err := db.GetMoveList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -310,8 +346,14 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 // PokemonListHandler handles requests on '/v1/pokemon' and returns a list of all pokemon resources.
 func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	pokemon, err := db.GetPokemonList()
+	pokemon, err := db.GetPokemonList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -390,8 +432,14 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 // PokemonTypeListHandler handles requests on '/v1/types' and returns a list of all pokemon type resources.
 func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Extract the ResourceListParams from the context with a type assertion
+	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
+	if !ok {
+		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		return
+	}
 	// Fetch the ability list from the database
-	pokemonTypes, err := db.GetPokemonTypeList()
+	pokemonTypes, err := db.GetPokemonTypeList(params.Sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

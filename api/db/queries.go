@@ -9,22 +9,38 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// SearchType represents the valid search types for resources (ID and name)
+// SearchType represents the valid search types for resources (ID and name).
 type SearchType string
 
 const (
 	ID   = "ID"
-	NAME = "name"
+	Name = "name"
 )
 
-// SearchInput is the input for a query searching a resource by ID or name
+// SearchInput is the input for a query searching a resource by ID or name.
 type SearchInput struct {
 	SearchType SearchType
 	ID         int
 	Name       string
 }
 
-// ResourceNotFoundError - error if a requested resource was not found
+// SortOption represents valid sorting types for resource lists.
+type SortType string
+
+const (
+	IDAsc    = "id_asc"
+	IDDesc   = "id_desc"
+	NameAsc  = "name_asc"
+	NameDesc = "name_desc"
+)
+
+// SearchInput is the input for resource lists, specifing if a specific sorting is requested.
+type SortInput struct {
+	SortEnabled bool
+	SortType    SortType
+}
+
+// ResourceNotFoundError - error if a requested resource was not found.
 type ResourceNotFoundError struct {
 	ResourceType string
 	SearchType   SearchType
@@ -36,17 +52,38 @@ type ResourceNotFoundError struct {
 func (e *ResourceNotFoundError) Error() string {
 	if e.SearchType == ID {
 		return fmt.Sprintf("resource of type '%v' with %v '%v' not found", e.ResourceType, e.SearchType, e.ID)
-	} else if e.SearchType == NAME {
+	} else if e.SearchType == Name {
 		return fmt.Sprintf("resource of type '%v' with %v '%v' not found", e.ResourceType, e.SearchType, e.Name)
 	} else {
 		return "resource not found"
 	}
 }
 
+// buildQueryWithOrder checks if the provided SortInput requires any sorting and returns a modified query
+// that sorts by idColumn or nameColumn if required.
+func buildQueryWithOrder(query string, sort SortInput, idColumn string, nameColumn string) string {
+	sortQuery := ""
+	// Check if any sorting is required and switch for the sorting type
+	if sort.SortEnabled {
+		switch sort.SortType {
+		case IDAsc:
+			sortQuery = fmt.Sprintf(" ORDER BY %v ASC", idColumn)
+		case IDDesc:
+			sortQuery = fmt.Sprintf(" ORDER BY %v DESC", idColumn)
+		case NameAsc:
+			sortQuery = fmt.Sprintf(" ORDER BY %v ASC", nameColumn)
+		case NameDesc:
+			sortQuery = fmt.Sprintf(" ORDER BY %v DESC", nameColumn)
+		}
+	}
+	return fmt.Sprintf("%v%v", query, sortQuery)
+}
+
 // GetAbilityList fetches a slice of all ability entries from the database.
-func GetAbilityList() ([]models.NamedResourceID, error) {
+func GetAbilityList(sort SortInput) ([]models.NamedResourceID, error) {
 	var abilities []models.NamedResourceID
-	rows, err := dbpool.Query(context.Background(), "SELECT ability_ID, ability_name FROM ability;")
+	queryString := buildQueryWithOrder("SELECT ability_ID, ability_name FROM ability", sort, "ability_ID", "ability_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +110,7 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 		LEFT JOIN pokemon_has_ability PA ON A.ability_ID = PA.ability_ID
 		LEFT JOIN pokemon P on PA.dex_number = P.dex_number;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
-	} else if input.SearchType == NAME {
+	} else if input.SearchType == Name {
 		queryString := `SELECT A.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM ability WHERE ability_name = $1) A
 		LEFT JOIN pokemon_has_ability PA ON A.ability_ID = PA.ability_ID
@@ -110,7 +147,7 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 	if ability.AbilityID == 0 {
 		if input.SearchType == ID {
 			return ability, nil, &ResourceNotFoundError{ResourceType: "ability", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return ability, nil, &ResourceNotFoundError{ResourceType: "ability", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
@@ -118,10 +155,10 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 }
 
 // GetCampList fetches a slice of all camp entries from the database.
-func GetCampList() ([]models.NamedResourceID, error) {
+func GetCampList(sort SortInput) ([]models.NamedResourceID, error) {
 	var camps []models.NamedResourceID
-	// SELECT camp_ID, camp_name FROM camp;
-	rows, err := dbpool.Query(context.Background(), "SELECT camp_ID, camp_name FROM camp;")
+	queryString := buildQueryWithOrder("SELECT camp_ID, camp_name FROM camp", sort, "camp_ID", "camp_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +184,7 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 		FROM (SELECT * FROM camp WHERE camp_ID = $1) C
 		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
-	} else if input.SearchType == NAME {
+	} else if input.SearchType == Name {
 		queryString := `SELECT C.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM camp WHERE camp_name = $1) C
 		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID;`
@@ -183,7 +220,7 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 	if camp.CampID == 0 {
 		if input.SearchType == ID {
 			return camp, nil, &ResourceNotFoundError{ResourceType: "camp", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return camp, nil, &ResourceNotFoundError{ResourceType: "camp", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
@@ -191,10 +228,10 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 }
 
 // GetDungeonList fetches a slice of all dungeon entries from the database.
-func GetDungeonList() ([]models.NamedResourceID, error) {
+func GetDungeonList(sort SortInput) ([]models.NamedResourceID, error) {
 	var dungeons []models.NamedResourceID
-	// SELECT dungeon_ID, dungeon_name FROM dungeon;
-	rows, err := dbpool.Query(context.Background(), "SELECT dungeon_ID, dungeon_name FROM dungeon;")
+	queryString := buildQueryWithOrder("SELECT dungeon_ID, dungeon_name FROM dungeon", sort, "dungeon_ID", "dungeon_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +258,7 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 		LEFT JOIN encountered_in DP ON D.dungeon_ID = DP.dungeon_ID
 		LEFT JOIN pokemon P ON DP.dex_number = P.dex_number;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
-	} else if input.SearchType == NAME {
+	} else if input.SearchType == Name {
 		queryString := `SELECT D.*, DP.super_enemy, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM dungeon WHERE dungeon_name = $1) D
 		LEFT JOIN encountered_in DP ON D.dungeon_ID = DP.dungeon_ID
@@ -258,7 +295,7 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 	if dungeon.DungeonID == 0 {
 		if input.SearchType == ID {
 			return dungeon, nil, &ResourceNotFoundError{ResourceType: "dungeon", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return dungeon, nil, &ResourceNotFoundError{ResourceType: "dungeon", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
@@ -266,10 +303,10 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 }
 
 // GetMoveList fetches a slice of all attack_move entries from the database.
-func GetMoveList() ([]models.NamedResourceID, error) {
+func GetMoveList(sort SortInput) ([]models.NamedResourceID, error) {
 	var moves []models.NamedResourceID
-	// SELECT move_ID, move_name FROM attack_move;
-	rows, err := dbpool.Query(context.Background(), "SELECT move_ID, move_name FROM attack_move;")
+	queryString := buildQueryWithOrder("SELECT move_ID, move_name FROM attack_move", sort, "move_ID", "move_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +334,7 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 		LEFT JOIN learns MP ON MP.move_ID = M.move_ID
 		LEFT JOIN pokemon P ON MP.dex_number = P.dex_number;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
-	} else if input.SearchType == NAME {
+	} else if input.SearchType == Name {
 		queryString := `SELECT M.*, T.type_name, MP.learn_type, MP.cost, MP.level,
 		P.dex_number, P.pokemon_name FROM attack_move M
 		INNER JOIN pokemon_type T ON M.move_name = $1 AND M.type_ID = T.type_ID
@@ -336,7 +373,7 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 	if move.MoveID == 0 {
 		if input.SearchType == ID {
 			return move, moveType, nil, &ResourceNotFoundError{ResourceType: "move", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return move, moveType, nil, &ResourceNotFoundError{ResourceType: "move", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
@@ -344,10 +381,10 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 }
 
 // GetPokemonList fetches a slice of all pokemon entries from the database.
-func GetPokemonList() ([]models.NamedResourceID, error) {
+func GetPokemonList(sort SortInput) ([]models.NamedResourceID, error) {
 	var pokemonList []models.NamedResourceID
-	// SELECT dex_number, pokemon_name FROM pokemon;
-	rows, err := dbpool.Query(context.Background(), "SELECT dex_number, pokemon_name FROM pokemon;")
+	queryString := buildQueryWithOrder("SELECT dex_number, pokemon_name FROM pokemon", sort, "dex_number", "pokemon_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +418,7 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 			LEFT JOIN dungeon D ON PD.dungeon_ID = D.dungeon_ID;`
 			rows[0], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			queryString := `SELECT P.*, C.camp_name, D.dungeon_ID, D.dungeon_name, PD.super_enemy
 			FROM pokemon P INNER JOIN camp C ON P.pokemon_name = $1 AND P.camp_ID = C.camp_ID
 			LEFT JOIN encountered_in PD ON P.dex_number = PD.dex_number
@@ -400,7 +437,7 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 			INNER JOIN pokemon_has_type PT ON PT.dex_number = $1 AND PT.type_ID = T.type_ID;`
 			rows[1], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			queryString := `SELECT T.* FROM pokemon P
 			INNER JOIN pokemon_has_type PT ON P.pokemon_name = $1 AND P.dex_number = PT.dex_number
 			INNER JOIN pokemon_type T ON PT.type_ID = T.type_ID;`
@@ -418,7 +455,7 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 			INNER JOIN pokemon_has_ability PA ON PA.dex_number = $1 AND PA.ability_ID = A.ability_ID;`
 			rows[2], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			queryString := `SELECT A.ability_ID, A.ability_name FROM pokemon P
 			INNER JOIN pokemon_has_ability PA ON P.pokemon_name = $1 AND P.dex_number = PA.dex_number
 			INNER JOIN ability A ON PA.ability_ID = A.ability_ID;`
@@ -436,7 +473,7 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 			INNER JOIN learns PM ON PM.dex_number = $1 AND PM.move_ID = M.move_ID;`
 			rows[3], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			queryString := `SELECT M.move_ID, M.move_name, PM.learn_type, PM.cost, PM.level
 			FROM pokemon P INNER JOIN learns PM ON P.pokemon_name = $1 AND P.dex_number = PM.dex_number
 			INNER JOIN attack_move M ON PM.move_ID = M.move_ID;`
@@ -482,7 +519,7 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 	if pokemon.DexNumber == 0 {
 		if input.SearchType == ID {
 			return pokemon, camp, nil, nil, nil, nil, &ResourceNotFoundError{ResourceType: "pokemon", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return pokemon, camp, nil, nil, nil, nil, &ResourceNotFoundError{ResourceType: "pokemon", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
@@ -517,10 +554,10 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 }
 
 // GetPokemonTypeList fetches a slice of all pokemon_type entries from the database.
-func GetPokemonTypeList() ([]models.NamedResourceID, error) {
+func GetPokemonTypeList(sort SortInput) ([]models.NamedResourceID, error) {
 	var pokemonTypes []models.NamedResourceID
-	// SELECT * FROM pokemon_type;
-	rows, err := dbpool.Query(context.Background(), "SELECT * FROM pokemon_type;")
+	queryString := buildQueryWithOrder("SELECT * FROM pokemon_type", sort, "type_ID", "type_name")
+	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +584,7 @@ func GetPokemonType(input SearchInput) (pokemonType models.PokemonType, interact
 		LEFT JOIN effectiveness TT ON AT.type_ID = TT.attacker
 		LEFT JOIN pokemon_type DT ON TT.defender = DT.type_ID;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
-	} else if input.SearchType == NAME {
+	} else if input.SearchType == Name {
 		queryString := `SELECT AT.*, TT.interaction, DT.*
 		FROM (SELECT * FROM pokemon_type WHERE type_name = $1) AT
 		LEFT JOIN effectiveness TT ON AT.type_ID = TT.attacker
@@ -584,7 +621,7 @@ func GetPokemonType(input SearchInput) (pokemonType models.PokemonType, interact
 	if pokemonType.TypeID == 0 {
 		if input.SearchType == ID {
 			return pokemonType, nil, &ResourceNotFoundError{ResourceType: "type", SearchType: input.SearchType, ID: input.ID}
-		} else if input.SearchType == NAME {
+		} else if input.SearchType == Name {
 			return pokemonType, nil, &ResourceNotFoundError{ResourceType: "type", SearchType: input.SearchType, Name: input.Name}
 		}
 	}
