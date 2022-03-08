@@ -19,11 +19,18 @@ type ContextKey int
 
 const (
 	ResourceListParamsKey ContextKey = iota
+	FieldLimitingParamsKey
 )
 
 // ResourceListParams contains the parsed parameter values for requests to resource lists.
 type ResourceListParams struct {
 	Sort db.SortInput
+}
+
+// FieldLimitingParams contains the parsed parameter values for requests to resource lists.
+type FieldLimitingParams struct {
+	FieldLimitingEnabled bool
+	Fields               []string
 }
 
 // answerWithListJSON transforms the provided resources to a list with URLs, packages
@@ -38,6 +45,14 @@ func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL str
 	responseJSON := orderedmap.New()
 	responseJSON.Set("count", len(resourcesWithURL))
 	responseJSON.Set("results", resourcesWithURL)
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -75,6 +90,35 @@ func transformToURLResources(resources []models.NamedResourceID, instanceURL str
 	return resourcesWithURL
 }
 
+// limitResultFields checks if field limiting is necessary and removes all fields
+// from the responseJSON that should not be displayed if this is the case.
+func limitResultFields(responseJSON *orderedmap.OrderedMap, params FieldLimitingParams) {
+	// Check if field limiting is not enabled
+	if !params.FieldLimitingEnabled {
+		return
+	}
+	// Loop through the JSON and check which parameters need to be removed
+	deleteKeys := make(map[string]bool)
+	keys := responseJSON.Keys()
+	for _, k := range keys {
+		deleteKeys[k] = true
+		for _, v := range params.Fields {
+			if k == v {
+				deleteKeys[k] = false
+				break
+			}
+		}
+	}
+	// Delete all keys marked for deletion
+	// Needs to be done separately since deleting while looping over the keys
+	// caused keys to be skipped and others to be used multiple times
+	for k, v := range deleteKeys {
+		if v {
+			responseJSON.Delete(k)
+		}
+	}
+}
+
 // AbilityListHandler handles requests on '/v1/abilities' and returns a list of all ability resources.
 func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Extract the ResourceListParams from the context with a type assertion
@@ -95,6 +139,12 @@ func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 
 // AbilitySearchHandler handles requests on '/v1/abilities/:searcharg' and returns information about the desired ability.
 func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -116,6 +166,8 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	responseJSON.Set("name", ability.AbilityName)
 	responseJSON.Set("description", ability.Description)
 	responseJSON.Set("pokemon", pokemonWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -147,6 +199,12 @@ func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 
 // CampSearchHandler handles requests on '/v1/camps/:searcharg' and returns information about the desired camp.
 func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -170,6 +228,8 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	responseJSON.Set("unlockType", camp.UnlockType)
 	responseJSON.Set("cost", camp.Cost)
 	responseJSON.Set("pokemon", pokemonWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -201,6 +261,12 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 
 // DungeonSearchHandler handles requests on '/v1/dungeons/:searcharg' and returns information about the desired dungeon.
 func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -230,6 +296,8 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	responseJSON.Set("pokemonJoining", dungeon.PokemonJoining)
 	responseJSON.Set("mapVisible", dungeon.MapVisible)
 	responseJSON.Set("pokemon", pokemonWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -261,6 +329,12 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 
 // MoveSearchHandler handles requests on '/v1/moves/:searcharg' and returns information about the desired move.
 func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -292,6 +366,8 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	responseJSON.Set("description", move.Description)
 	responseJSON.Set("type", moveType.ToNamedResourceURL(r.Host, "moves"))
 	responseJSON.Set("pokemon", pokemonWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -323,6 +399,12 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 
 // PokemonSearchHandler handles requests on '/v1/pokemon/:searcharg' and returns information about the desired pokemon.
 func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -364,6 +446,8 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	responseJSON.Set("dungeons", dungeonsWithURL)
 	responseJSON.Set("moves", movesWithURL)
 	responseJSON.Set("types", pokemonTypesWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -395,6 +479,12 @@ func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 
 // PokemonTypeSearchHandler handles requests on '/v1/types/:searcharg' and returns information about the desired pokemonType.
 func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Extract the FieldLimitingParams from the context with a type assertion
+	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
+	if !ok {
+		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		return
+	}
 	// Generate the input for the db search
 	searchInput := generateSearchInput(ps.ByName("searcharg"))
 	// Get the ability from the database
@@ -418,6 +508,8 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	responseJSON.Set("id", pokemonType.TypeID)
 	responseJSON.Set("name", pokemonType.TypeName)
 	responseJSON.Set("interactions", interactionsWithURL)
+	// Perform field limiting if necessary
+	limitResultFields(responseJSON, fieldLimitParams)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {

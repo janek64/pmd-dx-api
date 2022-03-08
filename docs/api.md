@@ -3,7 +3,7 @@
 ## General Options
 
 ### Field Limiting
-TODO: Add definition for limiting the returned fields of the JSON results.
+All endpoints of this API offer field limiting by adding a `fields` parameter to the request. The response JSON will then only contain the fields provided as values for this parameter, all other fields will be omitted. Non-existent field names will be ignored, if only non-existent fields are provided, the JSON will empty. The values of the `fields` parameter need to be separated by commata. Example: `v1/pokemon/1?fields=name,classification`
 
 ### Sorting
 All lists of resources offer sorting by id or name of the resources with the query parameter `sort`.
@@ -270,11 +270,11 @@ Returns a list of all Pokemon.
 
 
 #### Filtering
-This resource offers filters as query parameters:
+This resource list offers filters as query parameters:
 * By type: `type=<type-name or type-id>`
 * By move: `move=<move-name or move-id>`
 
-To filter by multiple values, simply repeat the parameter for the next value. Example: `/v1/pokemon?type=fire&type=flight`
+To filter by multiple values, simply separate the values with commata. Example: `/v1/pokemon?type=fire,flight`
 
 ### `GET` **/v1/pokemon/_\<id or name\>_:**
 Returns data about a single pokemon.
