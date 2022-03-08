@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iancoleman/orderedmap"
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/models"
 	"github.com/julienschmidt/httprouter"
@@ -27,17 +28,16 @@ type ResourceListParams struct {
 
 // answerWithListJSON transforms the provided resources to a list with URLs, packages
 // them in a JSON and sends it as a response with the provided ResponseWriter.
-func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL string, resourceTypeName string, w http.ResponseWriter) {
+func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL string, resourceTypeName string, w http.ResponseWriter, r *http.Request) {
 	// Build representation with URL instead of ID
 	var resourcesWithURL []models.NamedResourceURL
 	for _, r := range resources {
 		resourcesWithURL = append(resourcesWithURL, r.ToNamedResourceURL(requestedBaseURL, resourceTypeName))
 	}
 	// Build the response JSON as a map
-	responseJSON := map[string]interface{}{
-		"count":   len(resourcesWithURL),
-		"results": resourcesWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("count", len(resourcesWithURL))
+	responseJSON.Set("results", resourcesWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -90,7 +90,7 @@ func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(abilities, r.Host, "abilities", w)
+	answerWithListJSON(abilities, r.Host, "abilities", w, r)
 }
 
 // AbilitySearchHandler handles requests on '/v1/abilities/:searcharg' and returns information about the desired ability.
@@ -111,12 +111,11 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Build representation of the pokemon with URL instead of ID
 	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":          ability.AbilityID,
-		"name":        ability.AbilityName,
-		"description": ability.Description,
-		"pokemon":     pokemonWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", ability.AbilityID)
+	responseJSON.Set("name", ability.AbilityName)
+	responseJSON.Set("description", ability.Description)
+	responseJSON.Set("pokemon", pokemonWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -143,7 +142,7 @@ func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(camps, r.Host, "camps", w)
+	answerWithListJSON(camps, r.Host, "camps", w, r)
 }
 
 // CampSearchHandler handles requests on '/v1/camps/:searcharg' and returns information about the desired camp.
@@ -164,14 +163,13 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	// Build representation of the pokemon with URL instead of ID
 	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":          camp.CampID,
-		"name":        camp.CampName,
-		"description": camp.Description,
-		"unlockType":  camp.UnlockType,
-		"cost":        camp.Cost,
-		"pokemon":     pokemonWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", camp.CampID)
+	responseJSON.Set("name", camp.CampName)
+	responseJSON.Set("description", camp.Description)
+	responseJSON.Set("unlockType", camp.UnlockType)
+	responseJSON.Set("cost", camp.Cost)
+	responseJSON.Set("pokemon", pokemonWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -198,7 +196,7 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(dungeons, r.Host, "dungeons", w)
+	answerWithListJSON(dungeons, r.Host, "dungeons", w, r)
 }
 
 // DungeonSearchHandler handles requests on '/v1/dungeons/:searcharg' and returns information about the desired dungeon.
@@ -222,17 +220,16 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		pokemonWithURL = append(pokemonWithURL, p.ToDungeonPokemonURL(r.Host))
 	}
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":             dungeon.DungeonID,
-		"name":           dungeon.DungeonName,
-		"levels":         dungeon.Levels,
-		"startLevel":     dungeon.StartLevel,
-		"teamSize":       dungeon.TeamSize,
-		"itemsAllowed":   dungeon.ItemsAllowed,
-		"pokemonJoining": dungeon.PokemonJoining,
-		"mapVisible":     dungeon.MapVisible,
-		"pokemon":        pokemonWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", dungeon.DungeonID)
+	responseJSON.Set("name", dungeon.DungeonName)
+	responseJSON.Set("levels", dungeon.Levels)
+	responseJSON.Set("startLevel", dungeon.StartLevel)
+	responseJSON.Set("teamSize", dungeon.TeamSize)
+	responseJSON.Set("itemsAllowed", dungeon.ItemsAllowed)
+	responseJSON.Set("pokemonJoining", dungeon.PokemonJoining)
+	responseJSON.Set("mapVisible", dungeon.MapVisible)
+	responseJSON.Set("pokemon", pokemonWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -259,7 +256,7 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(moves, r.Host, "moves", w)
+	answerWithListJSON(moves, r.Host, "moves", w, r)
 }
 
 // MoveSearchHandler handles requests on '/v1/moves/:searcharg' and returns information about the desired move.
@@ -283,19 +280,18 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		pokemonWithURL = append(pokemonWithURL, p.ToMovePokemonURL(r.Host))
 	}
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":           move.MoveID,
-		"name":         move.MoveName,
-		"category":     move.Category,
-		"range":        move.Range,
-		"target":       move.Target,
-		"initialPP":    move.InitialPP,
-		"initialPower": move.InitialPower,
-		"accuracy":     move.Accuracy,
-		"description":  move.Description,
-		"type":         moveType.ToNamedResourceURL(r.Host, "moves"),
-		"pokemon":      pokemonWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", move.MoveID)
+	responseJSON.Set("name", move.MoveName)
+	responseJSON.Set("category", move.Category)
+	responseJSON.Set("range", move.Range)
+	responseJSON.Set("target", move.Target)
+	responseJSON.Set("initialPP", move.InitialPP)
+	responseJSON.Set("initialPower", move.InitialPower)
+	responseJSON.Set("accuracy", move.Accuracy)
+	responseJSON.Set("description", move.Description)
+	responseJSON.Set("type", moveType.ToNamedResourceURL(r.Host, "moves"))
+	responseJSON.Set("pokemon", pokemonWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -322,7 +318,7 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(pokemon, r.Host, "pokemon", w)
+	answerWithListJSON(pokemon, r.Host, "pokemon", w, r)
 }
 
 // PokemonSearchHandler handles requests on '/v1/pokemon/:searcharg' and returns information about the desired pokemon.
@@ -355,20 +351,19 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Build representation of the types with URL instead of ID
 	pokemonTypesWithURL := transformToURLResources(pokemonTypes, r.Host, "types")
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":              pokemon.DexNumber,
-		"name":            pokemon.PokemonName,
-		"classification":  pokemon.Classification,
-		"evolutionStage":  pokemon.EvolutionStage,
-		"evolveCondition": pokemon.EvolveCondition,
-		"evolveLevel":     pokemon.EvolveLevel,
-		"evolveCrystals":  pokemon.EvolveCrystals,
-		"camp":            camp.ToNamedResourceURL(r.Host, "camps"),
-		"abilities":       abilitiesWithURL,
-		"dungeons":        dungeonsWithURL,
-		"moves":           movesWithURL,
-		"types":           pokemonTypesWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", pokemon.DexNumber)
+	responseJSON.Set("name", pokemon.PokemonName)
+	responseJSON.Set("classification", pokemon.Classification)
+	responseJSON.Set("evolutionStage", pokemon.EvolutionStage)
+	responseJSON.Set("evolveCondition", pokemon.EvolveCondition)
+	responseJSON.Set("evolveLevel", pokemon.EvolveLevel)
+	responseJSON.Set("evolveCrystals", pokemon.EvolveCrystals)
+	responseJSON.Set("camp", camp.ToNamedResourceURL(r.Host, "camps"))
+	responseJSON.Set("abilities", abilitiesWithURL)
+	responseJSON.Set("dungeons", dungeonsWithURL)
+	responseJSON.Set("moves", movesWithURL)
+	responseJSON.Set("types", pokemonTypesWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
@@ -395,7 +390,7 @@ func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(pokemonTypes, r.Host, "types", w)
+	answerWithListJSON(pokemonTypes, r.Host, "types", w, r)
 }
 
 // PokemonTypeSearchHandler handles requests on '/v1/types/:searcharg' and returns information about the desired pokemonType.
@@ -419,11 +414,10 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 		interactionsWithURL = append(interactionsWithURL, i.ToTypeInteractionURL(r.Host))
 	}
 	// Build the response JSON with a map
-	responseJSON := map[string]interface{}{
-		"id":           pokemonType.TypeID,
-		"name":         pokemonType.TypeName,
-		"interactions": interactionsWithURL,
-	}
+	responseJSON := orderedmap.New()
+	responseJSON.Set("id", pokemonType.TypeID)
+	responseJSON.Set("name", pokemonType.TypeName)
+	responseJSON.Set("interactions", interactionsWithURL)
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
