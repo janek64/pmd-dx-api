@@ -5,6 +5,7 @@ This project offers a RESTful API with data from **Pokémon Mystery Dungeon: Res
 Technologies and core libraries used in this project:
 * [Go](https://go.dev/)
 * [net/http](https://pkg.go.dev/net/http)
+* [httprouter](https://github.com/julienschmidt/httprouter)
 * [pgx](https://github.com/jackc/pgx)
 * [PostgreSQL](https://www.postgresql.org/)
 

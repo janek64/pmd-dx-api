@@ -12,11 +12,12 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-// Type for DB connection error
+// DBConnectionError- type for database connection error
 type DBConnectionError struct {
 	MissingVar string
 }
 
+// Error - implementation of the error interface.
 func (e *DBConnectionError) Error() string {
 	return fmt.Sprintf("connecting to database failed because of missing environment variable '%v'", e.MissingVar)
 }

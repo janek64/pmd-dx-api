@@ -25,12 +25,6 @@ type ResourceListParams struct {
 	Sort db.SortInput
 }
 
-// listResponse defines the JSON structure for lists of API resources.
-type listResponse struct {
-	Count   int                       `json:"count"`
-	Results []models.NamedResourceURL `json:"results"`
-}
-
 // answerWithListJSON transforms the provided resources to a list with URLs, packages
 // them in a JSON and sends it as a response with the provided ResponseWriter.
 func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL string, resourceTypeName string, w http.ResponseWriter) {
@@ -39,9 +33,12 @@ func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL str
 	for _, r := range resources {
 		resourcesWithURL = append(resourcesWithURL, r.ToNamedResourceURL(requestedBaseURL, resourceTypeName))
 	}
-	// Build the response JSON as a struct
-	responseJSON := listResponse{len(resourcesWithURL), resourcesWithURL}
-	// Transform the struct to JSON
+	// Build the response JSON as a map
+	responseJSON := map[string]interface{}{
+		"count":   len(resourcesWithURL),
+		"results": resourcesWithURL,
+	}
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -113,19 +110,14 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	// Build representation of the pokemon with URL instead of ID
 	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID          int                       `json:"id"`
-		Name        string                    `json:"name"`
-		Description string                    `json:"description"`
-		Pokemon     []models.NamedResourceURL `json:"pokemon"`
-	}{
-		ID:          ability.AbilityID,
-		Name:        ability.AbilityName,
-		Description: ability.Description,
-		Pokemon:     pokemonWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":          ability.AbilityID,
+		"name":        ability.AbilityName,
+		"description": ability.Description,
+		"pokemon":     pokemonWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -171,23 +163,16 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 	// Build representation of the pokemon with URL instead of ID
 	pokemonWithURL := transformToURLResources(pokemon, r.Host, "pokemon")
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID          int                       `json:"id"`
-		Name        string                    `json:"name"`
-		Description string                    `json:"description"`
-		UnlockType  string                    `json:"unlockType"`
-		Cost        models.NullInt64          `json:"cost"`
-		Pokemon     []models.NamedResourceURL `json:"pokemon"`
-	}{
-		ID:          camp.CampID,
-		Name:        camp.CampName,
-		Description: camp.Description,
-		UnlockType:  camp.UnlockType,
-		Cost:        camp.Cost,
-		Pokemon:     pokemonWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":          camp.CampID,
+		"name":        camp.CampName,
+		"description": camp.Description,
+		"unlockType":  camp.UnlockType,
+		"cost":        camp.Cost,
+		"pokemon":     pokemonWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -236,29 +221,19 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	for _, p := range pokemon {
 		pokemonWithURL = append(pokemonWithURL, p.ToDungeonPokemonURL(r.Host))
 	}
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID             int                        `json:"id"`
-		Name           string                     `json:"name"`
-		Levels         int                        `json:"levels"`
-		StartLevel     models.NullInt64           `json:"startLevel"`
-		TeamSize       int                        `json:"teamSize"`
-		ItemsAllowed   bool                       `json:"itemsAllowed"`
-		PokemonJoining bool                       `json:"pokemonJoining"`
-		MapVisible     bool                       `json:"mapVisible"`
-		Pokemon        []models.DungeonPokemonURL `json:"pokemon"`
-	}{
-		ID:             dungeon.DungeonID,
-		Name:           dungeon.DungeonName,
-		Levels:         dungeon.Levels,
-		StartLevel:     dungeon.StartLevel,
-		TeamSize:       dungeon.TeamSize,
-		ItemsAllowed:   dungeon.ItemsAllowed,
-		PokemonJoining: dungeon.PokemonJoining,
-		MapVisible:     dungeon.MapVisible,
-		Pokemon:        pokemonWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":             dungeon.DungeonID,
+		"name":           dungeon.DungeonName,
+		"levels":         dungeon.Levels,
+		"startLevel":     dungeon.StartLevel,
+		"teamSize":       dungeon.TeamSize,
+		"itemsAllowed":   dungeon.ItemsAllowed,
+		"pokemonJoining": dungeon.PokemonJoining,
+		"mapVisible":     dungeon.MapVisible,
+		"pokemon":        pokemonWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -307,33 +282,21 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	for _, p := range pokemon {
 		pokemonWithURL = append(pokemonWithURL, p.ToMovePokemonURL(r.Host))
 	}
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID           int                     `json:"id"`
-		Name         string                  `json:"name"`
-		Category     string                  `json:"category"`
-		Range        string                  `json:"range"`
-		Target       string                  `json:"target"`
-		InitialPP    int                     `json:"initialPP"`
-		InitialPower int                     `json:"initialPower"`
-		Accuracy     int                     `json:"accuracy"`
-		Description  string                  `json:"description"`
-		Type         models.NamedResourceURL `json:"type"`
-		Pokemon      []models.MovePokemonURL `json:"pokemon"`
-	}{
-		ID:           move.MoveID,
-		Name:         move.MoveName,
-		Category:     move.Category,
-		Range:        move.Range,
-		Target:       move.Target,
-		InitialPP:    move.InitialPP,
-		InitialPower: move.InitialPower,
-		Accuracy:     move.Accuracy,
-		Description:  move.Description,
-		Type:         moveType.ToNamedResourceURL(r.Host, "moves"),
-		Pokemon:      pokemonWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":           move.MoveID,
+		"name":         move.MoveName,
+		"category":     move.Category,
+		"range":        move.Range,
+		"target":       move.Target,
+		"initialPP":    move.InitialPP,
+		"initialPower": move.InitialPower,
+		"accuracy":     move.Accuracy,
+		"description":  move.Description,
+		"type":         moveType.ToNamedResourceURL(r.Host, "moves"),
+		"pokemon":      pokemonWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -391,35 +354,22 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	// Build representation of the types with URL instead of ID
 	pokemonTypesWithURL := transformToURLResources(pokemonTypes, r.Host, "types")
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID              int                        `json:"id"`
-		Name            string                     `json:"name"`
-		Classification  string                     `json:"classification"`
-		EvolutionStage  int                        `json:"evolutionStage"`
-		EvolveCondition string                     `json:"evolveCondition"`
-		EvolveLevel     models.NullInt64           `json:"evolveLevel"`
-		EvolveCrystals  models.NullInt64           `json:"evolveCrystals"`
-		Camp            models.NamedResourceURL    `json:"camp"`
-		Abilities       []models.NamedResourceURL  `json:"abilities"`
-		Dungeons        []models.PokemonDungeonURL `json:"dungeons"`
-		Moves           []models.PokemonMoveURL    `json:"moves"`
-		Types           []models.NamedResourceURL  `json:"types"`
-	}{
-		ID:              pokemon.DexNumber,
-		Name:            pokemon.PokemonName,
-		Classification:  pokemon.Classification,
-		EvolutionStage:  pokemon.EvolutionStage,
-		EvolveCondition: pokemon.EvolveCondition,
-		EvolveLevel:     pokemon.EvolveLevel,
-		EvolveCrystals:  pokemon.EvolveCrystals,
-		Camp:            camp.ToNamedResourceURL(r.Host, "camps"),
-		Abilities:       abilitiesWithURL,
-		Dungeons:        dungeonsWithURL,
-		Moves:           movesWithURL,
-		Types:           pokemonTypesWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":              pokemon.DexNumber,
+		"name":            pokemon.PokemonName,
+		"classification":  pokemon.Classification,
+		"evolutionStage":  pokemon.EvolutionStage,
+		"evolveCondition": pokemon.EvolveCondition,
+		"evolveLevel":     pokemon.EvolveLevel,
+		"evolveCrystals":  pokemon.EvolveCrystals,
+		"camp":            camp.ToNamedResourceURL(r.Host, "camps"),
+		"abilities":       abilitiesWithURL,
+		"dungeons":        dungeonsWithURL,
+		"moves":           movesWithURL,
+		"types":           pokemonTypesWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -468,17 +418,13 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	for _, i := range interactions {
 		interactionsWithURL = append(interactionsWithURL, i.ToTypeInteractionURL(r.Host))
 	}
-	// Build the response JSON with an anonymous struct
-	responseJSON := struct {
-		ID           int                         `json:"id"`
-		Name         string                      `json:"name"`
-		Interactions []models.TypeInteractionURL `json:"interactions"`
-	}{
-		ID:           pokemonType.TypeID,
-		Name:         pokemonType.TypeName,
-		Interactions: interactionsWithURL,
+	// Build the response JSON with a map
+	responseJSON := map[string]interface{}{
+		"id":           pokemonType.TypeID,
+		"name":         pokemonType.TypeName,
+		"interactions": interactionsWithURL,
 	}
-	// Transform the struct to JSON
+	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
