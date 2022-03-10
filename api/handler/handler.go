@@ -4,7 +4,9 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -24,7 +26,8 @@ const (
 
 // ResourceListParams contains the parsed parameter values for requests to resource lists.
 type ResourceListParams struct {
-	Sort db.SortInput
+	Sort       db.SortInput
+	Pagination db.Pagination
 }
 
 // FieldLimitingParams contains the parsed parameter values for requests to resource lists.
@@ -35,15 +38,15 @@ type FieldLimitingParams struct {
 
 // answerWithListJSON transforms the provided resources to a list with URLs, packages
 // them in a JSON and sends it as a response with the provided ResponseWriter.
-func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL string, resourceTypeName string, w http.ResponseWriter, r *http.Request) {
+func answerWithListJSON(count int, resources []models.NamedResourceID, resourceTypeName string, pagination db.Pagination, w http.ResponseWriter, r *http.Request) {
 	// Build representation with URL instead of ID
 	var resourcesWithURL []models.NamedResourceURL
-	for _, r := range resources {
-		resourcesWithURL = append(resourcesWithURL, r.ToNamedResourceURL(requestedBaseURL, resourceTypeName))
+	for _, resource := range resources {
+		resourcesWithURL = append(resourcesWithURL, resource.ToNamedResourceURL(r.Host, resourceTypeName))
 	}
 	// Build the response JSON as a map
 	responseJSON := orderedmap.New()
-	responseJSON.Set("count", len(resourcesWithURL))
+	responseJSON.Set("count", count)
 	responseJSON.Set("results", resourcesWithURL)
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
@@ -59,6 +62,57 @@ func answerWithListJSON(resources []models.NamedResourceID, requestedBaseURL str
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Generate the headers for pagination
+	// Calculate the page numbers
+	lastPage := count/pagination.PerPage + 1
+	if count%pagination.PerPage == 0 {
+		lastPage -= 1
+	}
+	nextPage := pagination.Page + 1
+	previousPage := pagination.Page - 1
+	// Generate the URLs
+	requestURL := r.Host + r.URL.String()
+	// If no page URL parameter was provided, add it
+	match, err := regexp.Match(`.+[?&]page=\d*(&.+)?`, []byte(requestURL))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !match {
+		// Check if there is already a question mark followed by characters
+		match, err = regexp.Match(`.+\?.+`, []byte(requestURL))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if match {
+			requestURL = fmt.Sprintf("%v&page=%v", requestURL, pagination.Page)
+		} else {
+			requestURL = fmt.Sprintf("%v?page=%v", requestURL, pagination.Page)
+		}
+
+	}
+	re, err := regexp.Compile(`([?&])page=\d*`)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	nextURL := re.ReplaceAllString(requestURL, fmt.Sprintf("${1}page=%v", nextPage))
+	previousURL := re.ReplaceAllString(requestURL, fmt.Sprintf("${1}page=%v", previousPage))
+	lastURL := re.ReplaceAllString(requestURL, fmt.Sprintf("${1}page=%v", lastPage))
+	// Set null values when links should not be provided
+	if pagination.Page == 1 {
+		previousURL = "null"
+	}
+	if pagination.Page == lastPage {
+		nextURL = "null"
+	} else if pagination.Page > lastPage {
+		nextURL = "null"
+		previousURL = "null"
+	}
+	// Set the Link header
+	linkHeader := fmt.Sprintf("<%v>; rel=\"next\", <%v>; rel=\"previous\", <%v>; rel=\"last\"", nextURL, previousURL, lastURL)
+	w.Header().Set("Link", linkHeader)
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(json)
@@ -128,13 +182,13 @@ func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Fetch the ability list from the database
-	abilities, err := db.GetAbilityList(params.Sort)
+	count, abilities, err := db.GetAbilityList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(abilities, r.Host, "abilities", w, r)
+	answerWithListJSON(count, abilities, "abilities", params.Pagination, w, r)
 }
 
 // AbilitySearchHandler handles requests on '/v1/abilities/:searcharg' and returns information about the desired ability.
@@ -188,13 +242,13 @@ func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 		return
 	}
 	// Fetch the ability list from the database
-	camps, err := db.GetCampList(params.Sort)
+	count, camps, err := db.GetCampList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(camps, r.Host, "camps", w, r)
+	answerWithListJSON(count, camps, "camps", params.Pagination, w, r)
 }
 
 // CampSearchHandler handles requests on '/v1/camps/:searcharg' and returns information about the desired camp.
@@ -250,13 +304,13 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Fetch the ability list from the database
-	dungeons, err := db.GetDungeonList(params.Sort)
+	count, dungeons, err := db.GetDungeonList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(dungeons, r.Host, "dungeons", w, r)
+	answerWithListJSON(count, dungeons, "dungeons", params.Pagination, w, r)
 }
 
 // DungeonSearchHandler handles requests on '/v1/dungeons/:searcharg' and returns information about the desired dungeon.
@@ -318,13 +372,13 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 		return
 	}
 	// Fetch the ability list from the database
-	moves, err := db.GetMoveList(params.Sort)
+	count, moves, err := db.GetMoveList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(moves, r.Host, "moves", w, r)
+	answerWithListJSON(count, moves, "moves", params.Pagination, w, r)
 }
 
 // MoveSearchHandler handles requests on '/v1/moves/:searcharg' and returns information about the desired move.
@@ -388,13 +442,13 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		return
 	}
 	// Fetch the ability list from the database
-	pokemon, err := db.GetPokemonList(params.Sort)
+	count, pokemon, err := db.GetPokemonList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(pokemon, r.Host, "pokemon", w, r)
+	answerWithListJSON(count, pokemon, "pokemon", params.Pagination, w, r)
 }
 
 // PokemonSearchHandler handles requests on '/v1/pokemon/:searcharg' and returns information about the desired pokemon.
@@ -468,13 +522,13 @@ func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 		return
 	}
 	// Fetch the ability list from the database
-	pokemonTypes, err := db.GetPokemonTypeList(params.Sort)
+	count, pokemonTypes, err := db.GetPokemonTypeList(params.Sort, params.Pagination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
-	answerWithListJSON(pokemonTypes, r.Host, "types", w, r)
+	answerWithListJSON(count, pokemonTypes, "types", params.Pagination, w, r)
 }
 
 // PokemonTypeSearchHandler handles requests on '/v1/types/:searcharg' and returns information about the desired pokemonType.

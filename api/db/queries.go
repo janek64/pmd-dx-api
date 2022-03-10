@@ -34,10 +34,16 @@ const (
 	NameDesc = "name_desc"
 )
 
-// SearchInput is the input for resource lists, specifing if a specific sorting is requested.
+// SearchInput is an input for resource lists, specifing if a specific sorting is requested.
 type SortInput struct {
 	SortEnabled bool
 	SortType    SortType
+}
+
+// SearchInput is an input for resource lists, specifing how many and which results should be queried.
+type Pagination struct {
+	PerPage int
+	Page    int
 }
 
 // ResourceNotFoundError - error if a requested resource was not found.
@@ -59,32 +65,45 @@ func (e *ResourceNotFoundError) Error() string {
 	}
 }
 
-// buildQueryWithOrder checks if the provided SortInput requires any sorting and returns a modified query
-// that sorts by idColumn or nameColumn if required.
-func buildQueryWithOrder(query string, sort SortInput, idColumn string, nameColumn string) string {
+// buildQuery builds the complete query for the provided values. It checks if the provided SortInput requires
+// any sorting and returns a modified query that sorts by idColumn or nameColumn if required. It also adds
+// LIMIT and OFFSET based on the given Pagination object.
+func buildQuery(query string, sort SortInput, idColumn string, nameColumn string, pagination Pagination) string {
 	// Set default ordering to ID ascending
-	sortQuery := fmt.Sprintf(" ORDER BY %v ASC", idColumn)
+	sortQuery := fmt.Sprintf("ORDER BY %v ASC", idColumn)
 	// Check if any sorting is required and switch for the sorting type
 	if sort.SortEnabled {
 		switch sort.SortType {
 		case IDDesc:
-			sortQuery = fmt.Sprintf(" ORDER BY %v DESC", idColumn)
+			sortQuery = fmt.Sprintf("ORDER BY %v DESC", idColumn)
 		case NameAsc:
-			sortQuery = fmt.Sprintf(" ORDER BY %v ASC", nameColumn)
+			sortQuery = fmt.Sprintf("ORDER BY %v ASC", nameColumn)
 		case NameDesc:
-			sortQuery = fmt.Sprintf(" ORDER BY %v DESC", nameColumn)
+			sortQuery = fmt.Sprintf("ORDER BY %v DESC", nameColumn)
 		}
 	}
-	return fmt.Sprintf("%v%v", query, sortQuery)
+	limitQuery := fmt.Sprintf("LIMIT %v OFFSET %v", pagination.PerPage, (pagination.Page-1)*pagination.PerPage)
+	return fmt.Sprintf("%v %v %v;", query, sortQuery, limitQuery)
+}
+
+// getCount queries the COUNT(*) for the given table and returns it as an int.
+func getCount(table string) (int, error) {
+	var count int
+	queryString := fmt.Sprintf("SELECT COUNT(*) AS count FROM %v;", table)
+	err := dbpool.QueryRow(context.Background(), queryString).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // GetAbilityList fetches a slice of all ability entries from the database.
-func GetAbilityList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetAbilityList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var abilities []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT ability_ID, ability_name FROM ability", sort, "ability_ID", "ability_name")
+	queryString := buildQuery("SELECT ability_ID, ability_name FROM ability", sort, "ability_ID", "ability_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all abilities found to the slice
@@ -92,11 +111,16 @@ func GetAbilityList(sort SortInput) ([]models.NamedResourceID, error) {
 		var ability models.NamedResourceID
 		err = rows.Scan(&ability.ID, &ability.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		abilities = append(abilities, ability)
 	}
-	return abilities, nil
+	// Get the total count
+	count, err := getCount("ability")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, abilities, nil
 }
 
 // GetAbility fetches an ability entry and all pokemon that have it from the database by its ID or name.
@@ -154,12 +178,12 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 }
 
 // GetCampList fetches a slice of all camp entries from the database.
-func GetCampList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetCampList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var camps []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT camp_ID, camp_name FROM camp", sort, "camp_ID", "camp_name")
+	queryString := buildQuery("SELECT camp_ID, camp_name FROM camp", sort, "camp_ID", "camp_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all camps found to the slice
@@ -167,11 +191,16 @@ func GetCampList(sort SortInput) ([]models.NamedResourceID, error) {
 		var camp models.NamedResourceID
 		err = rows.Scan(&camp.ID, &camp.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		camps = append(camps, camp)
 	}
-	return camps, nil
+	// Get the total count
+	count, err := getCount("camp")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, camps, nil
 }
 
 // GetCamp fetches a camp entry and all pokemon living in it from the database by its ID or name.
@@ -227,12 +256,12 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 }
 
 // GetDungeonList fetches a slice of all dungeon entries from the database.
-func GetDungeonList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetDungeonList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var dungeons []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT dungeon_ID, dungeon_name FROM dungeon", sort, "dungeon_ID", "dungeon_name")
+	queryString := buildQuery("SELECT dungeon_ID, dungeon_name FROM dungeon", sort, "dungeon_ID", "dungeon_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all dungeons found to the slice
@@ -240,11 +269,16 @@ func GetDungeonList(sort SortInput) ([]models.NamedResourceID, error) {
 		var dungeon models.NamedResourceID
 		err = rows.Scan(&dungeon.ID, &dungeon.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		dungeons = append(dungeons, dungeon)
 	}
-	return dungeons, nil
+	// Get the total count
+	count, err := getCount("dungeon")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, dungeons, nil
 }
 
 // GetDungeon fetches a dungeon entry and all pokemon encountered in it from the database by its ID or name.
@@ -302,12 +336,12 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 }
 
 // GetMoveList fetches a slice of all attack_move entries from the database.
-func GetMoveList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetMoveList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var moves []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT move_ID, move_name FROM attack_move", sort, "move_ID", "move_name")
+	queryString := buildQuery("SELECT move_ID, move_name FROM attack_move", sort, "move_ID", "move_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all moves found to the slice
@@ -315,11 +349,16 @@ func GetMoveList(sort SortInput) ([]models.NamedResourceID, error) {
 		var move models.NamedResourceID
 		err = rows.Scan(&move.ID, &move.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		moves = append(moves, move)
 	}
-	return moves, nil
+	// Get the total count
+	count, err := getCount("attack_move")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, moves, nil
 }
 
 // GetMove fetches a move entry, its type and all pokemon learning it from the database by its ID or name.
@@ -380,12 +419,12 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 }
 
 // GetPokemonList fetches a slice of all pokemon entries from the database.
-func GetPokemonList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetPokemonList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var pokemonList []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT dex_number, pokemon_name FROM pokemon", sort, "dex_number", "pokemon_name")
+	queryString := buildQuery("SELECT dex_number, pokemon_name FROM pokemon", sort, "dex_number", "pokemon_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all pokemon found to the slice
@@ -393,11 +432,16 @@ func GetPokemonList(sort SortInput) ([]models.NamedResourceID, error) {
 		var pokemon models.NamedResourceID
 		err = rows.Scan(&pokemon.ID, &pokemon.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		pokemonList = append(pokemonList, pokemon)
 	}
-	return pokemonList, nil
+	// Get the total count
+	count, err := getCount("pokemon")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, pokemonList, nil
 }
 
 // GetMove fetches a move entry, its type and all pokemon learning it from the database by its ID or name.
@@ -553,12 +597,12 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 }
 
 // GetPokemonTypeList fetches a slice of all pokemon_type entries from the database.
-func GetPokemonTypeList(sort SortInput) ([]models.NamedResourceID, error) {
+func GetPokemonTypeList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
 	var pokemonTypes []models.NamedResourceID
-	queryString := buildQueryWithOrder("SELECT * FROM pokemon_type", sort, "type_ID", "type_name")
+	queryString := buildQuery("SELECT * FROM pokemon_type", sort, "type_ID", "type_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	// Add all types found to the slice
@@ -566,11 +610,16 @@ func GetPokemonTypeList(sort SortInput) ([]models.NamedResourceID, error) {
 		var pokemonType models.NamedResourceID
 		err = rows.Scan(&pokemonType.ID, &pokemonType.Name)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		pokemonTypes = append(pokemonTypes, pokemonType)
 	}
-	return pokemonTypes, nil
+	// Get the total count
+	count, err := getCount("dungeon")
+	if err != nil {
+		return 0, nil, err
+	}
+	return count, pokemonTypes, nil
 }
 
 // GetPokemonType fetches a pokemonType entry and its type interactions from the database by its ID or name.

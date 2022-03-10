@@ -11,7 +11,15 @@ All lists of resources offer sorting by id or name of the resources with the que
 * Only the first value provided is used for sorting.
 
 ### Pagination
-TODO: Add definition for limiting results and using a offset.
+All lists of resources offer pagination for limiting result size (and reducing network traffic) with the query parameters `per_page` and `page`.
+* `per_page` specifies the number of items that should appear in the result array of the response JSON.
+* `page` specifies the page of results that should be returned, beginning with 1. This means that the first `per_page`*(`page`-1) results will be shown.
+
+Example: `/v1/pokemon?per_page=20&page=4`
+
+If no URL parameters are provided for pagination, `per_page` will be 50 and and `page` will be 1.
+
+The `Link` Header will contain URLs for `next` (next page for the given `per_page`), `previous` (previous page for the given `per_page`) and `last` (last page for the given `per_page`). If a next or previous page does not exist, the URL will be `null`.
 
 ## General Types
 ### NamedResource
@@ -268,13 +276,6 @@ Returns a list of all Pokemon.
 | count       | Total number of pokemon resources available from this API. | Integer                |
 | results     | A list of named pokemon resources.                         | Array\<NamedResource\> |
 
-
-#### Filtering
-This resource list offers filters as query parameters:
-* By type: `type=<type-name or type-id>`
-* By move: `move=<move-name or move-id>`
-
-To filter by multiple values, simply separate the values with commata. Example: `/v1/pokemon?type=fire,flight`
 
 ### `GET` **/v1/pokemon/_\<id or name\>_:**
 Returns data about a single pokemon.
