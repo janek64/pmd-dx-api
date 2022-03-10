@@ -62,12 +62,11 @@ func (e *ResourceNotFoundError) Error() string {
 // buildQueryWithOrder checks if the provided SortInput requires any sorting and returns a modified query
 // that sorts by idColumn or nameColumn if required.
 func buildQueryWithOrder(query string, sort SortInput, idColumn string, nameColumn string) string {
-	sortQuery := ""
+	// Set default ordering to ID ascending
+	sortQuery := fmt.Sprintf(" ORDER BY %v ASC", idColumn)
 	// Check if any sorting is required and switch for the sorting type
 	if sort.SortEnabled {
 		switch sort.SortType {
-		case IDAsc:
-			sortQuery = fmt.Sprintf(" ORDER BY %v ASC", idColumn)
 		case IDDesc:
 			sortQuery = fmt.Sprintf(" ORDER BY %v DESC", idColumn)
 		case NameAsc:
@@ -108,13 +107,13 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 		queryString := `SELECT A.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM ability WHERE ability_ID = $1) A
 		LEFT JOIN pokemon_has_ability PA ON A.ability_ID = PA.ability_ID
-		LEFT JOIN pokemon P on PA.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P on PA.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
 	} else if input.SearchType == Name {
 		queryString := `SELECT A.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM ability WHERE ability_name = $1) A
 		LEFT JOIN pokemon_has_ability PA ON A.ability_ID = PA.ability_ID
-		LEFT JOIN pokemon P on PA.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P on PA.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.Name)
 	} else {
 		return ability, nil, fmt.Errorf("illegal search type %v", input.SearchType)
@@ -182,12 +181,12 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 	if input.SearchType == ID {
 		queryString := `SELECT C.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM camp WHERE camp_ID = $1) C
-		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID;`
+		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
 	} else if input.SearchType == Name {
 		queryString := `SELECT C.*, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM camp WHERE camp_name = $1) C
-		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID;`
+		LEFT JOIN pokemon P ON C.camp_ID = P.camp_ID ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.Name)
 	} else {
 		return camp, nil, fmt.Errorf("illegal search type %v", input.SearchType)
@@ -256,13 +255,13 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 		queryString := `SELECT D.*, DP.super_enemy, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM dungeon WHERE dungeon_ID = $1) D
 		LEFT JOIN encountered_in DP ON D.dungeon_ID = DP.dungeon_ID
-		LEFT JOIN pokemon P ON DP.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P ON DP.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
 	} else if input.SearchType == Name {
 		queryString := `SELECT D.*, DP.super_enemy, P.dex_number, P.pokemon_name
 		FROM (SELECT * FROM dungeon WHERE dungeon_name = $1) D
 		LEFT JOIN encountered_in DP ON D.dungeon_ID = DP.dungeon_ID
-		LEFT JOIN pokemon P ON DP.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P ON DP.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.Name)
 	} else {
 		return dungeon, nil, fmt.Errorf("illegal search type %v", input.SearchType)
@@ -332,14 +331,14 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 		P.dex_number, P.pokemon_name FROM attack_move M
 		INNER JOIN pokemon_type T ON M.move_ID = $1 AND M.type_ID = T.type_ID
 		LEFT JOIN learns MP ON MP.move_ID = M.move_ID
-		LEFT JOIN pokemon P ON MP.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P ON MP.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
 	} else if input.SearchType == Name {
 		queryString := `SELECT M.*, T.type_name, MP.learn_type, MP.cost, MP.level,
 		P.dex_number, P.pokemon_name FROM attack_move M
 		INNER JOIN pokemon_type T ON M.move_name = $1 AND M.type_ID = T.type_ID
 		LEFT JOIN learns MP ON MP.move_ID = M.move_ID
-		LEFT JOIN pokemon P ON MP.dex_number = P.dex_number;`
+		LEFT JOIN pokemon P ON MP.dex_number = P.dex_number ORDER BY P.dex_number ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.Name)
 	} else {
 		return move, moveType, nil, fmt.Errorf("illegal search type %v", input.SearchType)
@@ -415,14 +414,14 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 			queryString := `SELECT P.*, C.camp_name, D.dungeon_ID, D.dungeon_name, PD.super_enemy
 			FROM pokemon P INNER JOIN camp C ON P.dex_number = $1 AND P.camp_ID = C.camp_ID
 			LEFT JOIN encountered_in PD ON P.dex_number = PD.dex_number
-			LEFT JOIN dungeon D ON PD.dungeon_ID = D.dungeon_ID;`
+			LEFT JOIN dungeon D ON PD.dungeon_ID = D.dungeon_ID ORDER BY D.dungeon_ID ASC;`
 			rows[0], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
 		} else if input.SearchType == Name {
 			queryString := `SELECT P.*, C.camp_name, D.dungeon_ID, D.dungeon_name, PD.super_enemy
 			FROM pokemon P INNER JOIN camp C ON P.pokemon_name = $1 AND P.camp_ID = C.camp_ID
 			LEFT JOIN encountered_in PD ON P.dex_number = PD.dex_number
-			LEFT JOIN dungeon D ON PD.dungeon_ID = D.dungeon_ID;`
+			LEFT JOIN dungeon D ON PD.dungeon_ID = D.dungeon_ID ORDER BY D.dungeon_ID ASC;`
 			rows[0], err = dbpool.Query(context.Background(), queryString, input.Name)
 			return err
 		} else {
@@ -433,14 +432,14 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 	errs.Go(func() error {
 		// Use different query depending on search type
 		if input.SearchType == ID {
-			queryString := `SELECT T.* FROM pokemon_type T
-			INNER JOIN pokemon_has_type PT ON PT.dex_number = $1 AND PT.type_ID = T.type_ID;`
+			queryString := `SELECT T.* FROM pokemon_type T INNER JOIN pokemon_has_type PT
+			ON PT.dex_number = $1 AND PT.type_ID = T.type_ID ORDER BY T.type_ID ASC;`
 			rows[1], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
 		} else if input.SearchType == Name {
 			queryString := `SELECT T.* FROM pokemon P
 			INNER JOIN pokemon_has_type PT ON P.pokemon_name = $1 AND P.dex_number = PT.dex_number
-			INNER JOIN pokemon_type T ON PT.type_ID = T.type_ID;`
+			INNER JOIN pokemon_type T ON PT.type_ID = T.type_ID ORDER BY T.type_ID ASC;`
 			rows[1], err = dbpool.Query(context.Background(), queryString, input.Name)
 			return err
 		} else {
@@ -451,14 +450,14 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 	errs.Go(func() error {
 		// Use different query depending on search type
 		if input.SearchType == ID {
-			queryString := `SELECT A.ability_ID, A.ability_name FROM ability A
-			INNER JOIN pokemon_has_ability PA ON PA.dex_number = $1 AND PA.ability_ID = A.ability_ID;`
+			queryString := `SELECT A.ability_ID, A.ability_name FROM ability A INNER JOIN pokemon_has_ability PA
+			ON PA.dex_number = $1 AND PA.ability_ID = A.ability_ID ORDER BY A.ability_ID ASC;`
 			rows[2], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
 		} else if input.SearchType == Name {
 			queryString := `SELECT A.ability_ID, A.ability_name FROM pokemon P
 			INNER JOIN pokemon_has_ability PA ON P.pokemon_name = $1 AND P.dex_number = PA.dex_number
-			INNER JOIN ability A ON PA.ability_ID = A.ability_ID;`
+			INNER JOIN ability A ON PA.ability_ID = A.ability_ID ORDER BY A.ability_ID ASC;`
 			rows[2], err = dbpool.Query(context.Background(), queryString, input.Name)
 			return err
 		} else {
@@ -470,13 +469,13 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 		// Use different query depending on search type
 		if input.SearchType == ID {
 			queryString := `SELECT M.move_ID, M.move_name, PM.learn_type, PM.cost, PM.level FROM attack_move M
-			INNER JOIN learns PM ON PM.dex_number = $1 AND PM.move_ID = M.move_ID;`
+			INNER JOIN learns PM ON PM.dex_number = $1 AND PM.move_ID = M.move_ID ORDER BY M.move_ID ASC;`
 			rows[3], err = dbpool.Query(context.Background(), queryString, input.ID)
 			return err
 		} else if input.SearchType == Name {
 			queryString := `SELECT M.move_ID, M.move_name, PM.learn_type, PM.cost, PM.level
 			FROM pokemon P INNER JOIN learns PM ON P.pokemon_name = $1 AND P.dex_number = PM.dex_number
-			INNER JOIN attack_move M ON PM.move_ID = M.move_ID;`
+			INNER JOIN attack_move M ON PM.move_ID = M.move_ID ORDER BY M.move_ID ASC;`
 			rows[3], err = dbpool.Query(context.Background(), queryString, input.Name)
 			return err
 		} else {
@@ -582,13 +581,13 @@ func GetPokemonType(input SearchInput) (pokemonType models.PokemonType, interact
 		queryString := `SELECT AT.*, TT.interaction, DT.*
 		FROM (SELECT * FROM pokemon_type WHERE type_ID = $1) AT
 		LEFT JOIN effectiveness TT ON AT.type_ID = TT.attacker
-		LEFT JOIN pokemon_type DT ON TT.defender = DT.type_ID;`
+		LEFT JOIN pokemon_type DT ON TT.defender = DT.type_ID ORDER BY DT.type_ID ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.ID)
 	} else if input.SearchType == Name {
 		queryString := `SELECT AT.*, TT.interaction, DT.*
 		FROM (SELECT * FROM pokemon_type WHERE type_name = $1) AT
 		LEFT JOIN effectiveness TT ON AT.type_ID = TT.attacker
-		LEFT JOIN pokemon_type DT ON TT.defender = DT.type_ID;`
+		LEFT JOIN pokemon_type DT ON TT.defender = DT.type_ID ORDER BY DT.type_ID ASC;`
 		rows, err = dbpool.Query(context.Background(), queryString, input.Name)
 	} else {
 		return pokemonType, nil, fmt.Errorf("illegal search type %v", input.SearchType)
