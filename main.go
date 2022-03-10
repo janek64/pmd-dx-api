@@ -9,6 +9,7 @@ import (
 
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
+	"github.com/janek64/pmd-dx-api/api/logger"
 	"github.com/janek64/pmd-dx-api/api/middleware"
 	"github.com/julienschmidt/httprouter"
 )
@@ -23,8 +24,17 @@ func getEnv(key string, defaultValue string) string {
 }
 
 func main() {
+	// Initialize the logger
+	err := logger.InitLogger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error setting up logger: %v\n", err)
+		os.Exit(1)
+	}
+	// Close the logs files when exiting the program
+	defer logger.CloseLogger()
+
 	// Setup the database connection pool
-	err := db.InitDB()
+	err = db.InitDB()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
@@ -44,19 +54,27 @@ func main() {
 	// Create a new httprouter that will handle requests
 	router := httprouter.New()
 
+	// Define the middleware chains
+	defaultMiddleware := func(h httprouter.Handle) httprouter.Handle {
+		return middleware.LogRequest(middleware.FieldLimitingParams(h))
+	}
+	resourceListMiddleware := func(h httprouter.Handle) httprouter.Handle {
+		return defaultMiddleware(middleware.ResourceListParams(h))
+	}
+
 	// Register all handlers
-	router.GET("/v1/abilities", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.AbilityListHandler)))
-	router.GET("/v1/abilities/:searcharg", middleware.FieldLimitingParams(handler.AbilitySearchHandler))
-	router.GET("/v1/camps", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.CampListHandler)))
-	router.GET("/v1/camps/:searcharg", middleware.FieldLimitingParams(handler.CampSearchHandler))
-	router.GET("/v1/dungeons", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.DungeonListHandler)))
-	router.GET("/v1/dungeons/:searcharg", middleware.FieldLimitingParams(handler.DungeonSearchHandler))
-	router.GET("/v1/moves", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.MoveListHandler)))
-	router.GET("/v1/moves/:searcharg", middleware.FieldLimitingParams(handler.MoveSearchHandler))
-	router.GET("/v1/pokemon", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.PokemonListHandler)))
-	router.GET("/v1/pokemon/:searcharg", middleware.FieldLimitingParams(handler.PokemonSearchHandler))
-	router.GET("/v1/types", middleware.FieldLimitingParams(middleware.ResourceListParams(handler.PokemonTypeListHandler)))
-	router.GET("/v1/types/:searcharg", middleware.FieldLimitingParams(handler.PokemonTypeSearchHandler))
+	router.GET("/v1/abilities", resourceListMiddleware(handler.AbilityListHandler))
+	router.GET("/v1/abilities/:searcharg", defaultMiddleware(handler.AbilitySearchHandler))
+	router.GET("/v1/camps", resourceListMiddleware(handler.CampListHandler))
+	router.GET("/v1/camps/:searcharg", defaultMiddleware(handler.CampSearchHandler))
+	router.GET("/v1/dungeons", resourceListMiddleware(handler.DungeonListHandler))
+	router.GET("/v1/dungeons/:searcharg", defaultMiddleware(handler.DungeonSearchHandler))
+	router.GET("/v1/moves", resourceListMiddleware(handler.MoveListHandler))
+	router.GET("/v1/moves/:searcharg", defaultMiddleware(handler.MoveSearchHandler))
+	router.GET("/v1/pokemon", resourceListMiddleware(handler.PokemonListHandler))
+	router.GET("/v1/pokemon/:searcharg", defaultMiddleware(handler.PokemonSearchHandler))
+	router.GET("/v1/types", resourceListMiddleware(handler.PokemonTypeListHandler))
+	router.GET("/v1/types/:searcharg", defaultMiddleware(handler.PokemonTypeSearchHandler))
 
 	// Start the server with the created router and specified port
 	fmt.Printf("pmd-dx-api listening on port %v\n", port)

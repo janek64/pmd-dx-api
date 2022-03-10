@@ -7,6 +7,7 @@ require (
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 require (

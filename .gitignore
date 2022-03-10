@@ -6,3 +6,6 @@
 
 # Exclude docs (temporary)
 docs/*/
+
+# Exclude logs
+logs/

@@ -10,6 +10,7 @@ import (
 
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
+	"github.com/janek64/pmd-dx-api/api/logger"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -65,5 +66,14 @@ func FieldLimitingParams(h httprouter.Handle) httprouter.Handle {
 		ctx := context.WithValue(r.Context(), handler.FieldLimitingParamsKey, fieldLimitParams)
 		// Call the handler with the created context
 		h(w, r.WithContext(ctx), ps)
+	}
+}
+
+// LogRequest logs the request with the logger package by using a custom http.ResponseWriter.
+func LogRequest(h httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		responseRecorder := logger.ResponseRecorder{ResponseWriter: w, Status: 200, Size: 0}
+		h(&responseRecorder, r, ps)
+		logger.LogRequest(r, responseRecorder)
 	}
 }
