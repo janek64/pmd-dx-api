@@ -4,7 +4,9 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -74,6 +76,9 @@ func LogRequest(h httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		responseRecorder := logger.ResponseRecorder{ResponseWriter: w, Status: 200, Size: 0}
 		h(&responseRecorder, r, ps)
-		logger.LogRequest(r, responseRecorder)
+		err := logger.LogRequest(r, responseRecorder)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Writing to the access log failed: %v", err)
+		}
 	}
 }

@@ -4,14 +4,18 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/iancoleman/orderedmap"
 	"github.com/janek64/pmd-dx-api/api/db"
+	"github.com/janek64/pmd-dx-api/api/logger"
 	"github.com/janek64/pmd-dx-api/api/models"
 	"github.com/julienschmidt/httprouter"
 )
@@ -36,6 +40,26 @@ type FieldLimitingParams struct {
 	Fields               []string
 }
 
+// ErrorAndLog500 is a wrapper around http.Error() that
+// writes the error message to the error log instead of returning
+// it to the client. Should only be used for internal server errors.
+func ErrorAndLog500(w http.ResponseWriter, err error) {
+	// Use http.Error() with default message
+	http.Error(w, "Something went wrong on our side. Please contact the administrator.", http.StatusInternalServerError)
+	// Gather caller information to pass it to the logger
+	pc, file, line, ok := runtime.Caller(1)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "ErrorAndLog500: failed to fetch caller information")
+		return
+	}
+	caller := logger.CallerInformation{Pc: pc, File: file, Line: line}
+	// Write to the error logger
+	logErr := logger.LogError(err, caller)
+	if logErr != nil {
+		fmt.Fprintf(os.Stderr, "Writing to the error log failed: %v", err)
+	}
+}
+
 // answerWithListJSON transforms the provided resources to a list with URLs, packages
 // them in a JSON and sends it as a response with the provided ResponseWriter.
 func answerWithListJSON(count int, resources []models.NamedResourceID, resourceTypeName string, pagination db.Pagination, w http.ResponseWriter, r *http.Request) {
@@ -51,7 +75,7 @@ func answerWithListJSON(count int, resources []models.NamedResourceID, resourceT
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Perform field limiting if necessary
@@ -59,7 +83,7 @@ func answerWithListJSON(count int, resources []models.NamedResourceID, resourceT
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Generate the headers for pagination
@@ -75,14 +99,14 @@ func answerWithListJSON(count int, resources []models.NamedResourceID, resourceT
 	// If no page URL parameter was provided, add it
 	match, err := regexp.Match(`.+[?&]page=\d*(&.+)?`, []byte(requestURL))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	if !match {
 		// Check if there is already a question mark followed by characters
 		match, err = regexp.Match(`.+\?.+`, []byte(requestURL))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 			return
 		}
 		if match {
@@ -94,7 +118,7 @@ func answerWithListJSON(count int, resources []models.NamedResourceID, resourceT
 	}
 	re, err := regexp.Compile(`([?&])page=\d*`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	nextURL := re.ReplaceAllString(requestURL, fmt.Sprintf("${1}page=%v", nextPage))
@@ -178,13 +202,13 @@ func AbilityListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, abilities, err := db.GetAbilityList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -196,7 +220,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -208,7 +232,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -225,7 +249,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
@@ -238,13 +262,13 @@ func CampListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, camps, err := db.GetCampList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -256,7 +280,7 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -268,7 +292,7 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -287,7 +311,7 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
@@ -300,13 +324,13 @@ func DungeonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, dungeons, err := db.GetDungeonList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -318,7 +342,7 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -330,7 +354,7 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -355,7 +379,7 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
@@ -368,13 +392,13 @@ func MoveListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, moves, err := db.GetMoveList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -386,7 +410,7 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -398,7 +422,7 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -425,7 +449,7 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
@@ -438,13 +462,13 @@ func PokemonListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, pokemon, err := db.GetPokemonList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -456,7 +480,7 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -468,7 +492,7 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -505,7 +529,7 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
@@ -518,13 +542,13 @@ func PokemonTypeListHandler(w http.ResponseWriter, r *http.Request, _ httprouter
 	// Extract the ResourceListParams from the context with a type assertion
 	params, ok := r.Context().Value(ResourceListParamsKey).(ResourceListParams)
 	if !ok {
-		http.Error(w, "Missing ResourceListParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing ResourceListParams"))
 		return
 	}
 	// Fetch the ability list from the database
 	count, pokemonTypes, err := db.GetPokemonTypeList(params.Sort, params.Pagination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Build response JSON with URLs instead of IDs and send it to the client
@@ -536,7 +560,7 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	// Extract the FieldLimitingParams from the context with a type assertion
 	fieldLimitParams, ok := r.Context().Value(FieldLimitingParamsKey).(FieldLimitingParams)
 	if !ok {
-		http.Error(w, "Missing FieldLimitingParams", http.StatusInternalServerError)
+		ErrorAndLog500(w, errors.New("missing FieldLimitingParams"))
 		return
 	}
 	// Generate the input for the db search
@@ -548,7 +572,7 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 		if _, ok := err.(*db.ResourceNotFoundError); ok {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ErrorAndLog500(w, err)
 		}
 		return
 	}
@@ -567,7 +591,7 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	// Transform the map to JSON
 	json, err := json.Marshal(responseJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ErrorAndLog500(w, err)
 		return
 	}
 	// Write the response
