@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-// DBConnectionError- type for database connection error
+// DBConnectionError- type for database connection error.
 type DBConnectionError struct {
 	MissingVar string
 }
@@ -62,5 +62,6 @@ func CloseDB() error {
 		return errors.New("no connection pool to close")
 	}
 	dbpool.Close()
+	dbpool = nil
 	return nil
 }

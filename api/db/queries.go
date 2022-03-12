@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v4"
@@ -88,6 +89,9 @@ func buildQuery(query string, sort SortInput, idColumn string, nameColumn string
 
 // getCount queries the COUNT(*) for the given table and returns it as an int.
 func getCount(table string) (int, error) {
+	if dbpool == nil {
+		return 0, errors.New("database connection not initialized")
+	}
 	var count int
 	queryString := fmt.Sprintf("SELECT COUNT(*) AS count FROM %v;", table)
 	err := dbpool.QueryRow(context.Background(), queryString).Scan(&count)
@@ -99,6 +103,9 @@ func getCount(table string) (int, error) {
 
 // GetAbilityList fetches a slice of all ability entries from the database.
 func GetAbilityList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var abilities []models.NamedResourceID
 	queryString := buildQuery("SELECT ability_ID, ability_name FROM ability", sort, "ability_ID", "ability_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -125,6 +132,9 @@ func GetAbilityList(sort SortInput, pagination Pagination) (int, []models.NamedR
 
 // GetAbility fetches an ability entry and all pokemon that have it from the database by its ID or name.
 func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.NamedResourceID, err error) {
+	if dbpool == nil {
+		return ability, nil, errors.New("database connection not initialized")
+	}
 	var rows pgx.Rows
 	// Use different query depending on search type
 	if input.SearchType == ID {
@@ -179,6 +189,9 @@ func GetAbility(input SearchInput) (ability models.Ability, pokemon []models.Nam
 
 // GetCampList fetches a slice of all camp entries from the database.
 func GetCampList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var camps []models.NamedResourceID
 	queryString := buildQuery("SELECT camp_ID, camp_name FROM camp", sort, "camp_ID", "camp_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -205,6 +218,9 @@ func GetCampList(sort SortInput, pagination Pagination) (int, []models.NamedReso
 
 // GetCamp fetches a camp entry and all pokemon living in it from the database by its ID or name.
 func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourceID, err error) {
+	if dbpool == nil {
+		return camp, nil, errors.New("database connection not initialized")
+	}
 	var rows pgx.Rows
 	// Use different query depending on search type
 	if input.SearchType == ID {
@@ -257,6 +273,9 @@ func GetCamp(input SearchInput) (camp models.Camp, pokemon []models.NamedResourc
 
 // GetDungeonList fetches a slice of all dungeon entries from the database.
 func GetDungeonList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var dungeons []models.NamedResourceID
 	queryString := buildQuery("SELECT dungeon_ID, dungeon_name FROM dungeon", sort, "dungeon_ID", "dungeon_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -283,6 +302,9 @@ func GetDungeonList(sort SortInput, pagination Pagination) (int, []models.NamedR
 
 // GetDungeon fetches a dungeon entry and all pokemon encountered in it from the database by its ID or name.
 func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.DungeonPokemonID, err error) {
+	if dbpool == nil {
+		return dungeon, nil, errors.New("database connection not initialized")
+	}
 	var rows pgx.Rows
 	// Use different query depending on search type
 	if input.SearchType == ID {
@@ -337,6 +359,9 @@ func GetDungeon(input SearchInput) (dungeon models.Dungeon, pokemon []models.Dun
 
 // GetMoveList fetches a slice of all attack_move entries from the database.
 func GetMoveList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var moves []models.NamedResourceID
 	queryString := buildQuery("SELECT move_ID, move_name FROM attack_move", sort, "move_ID", "move_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -363,6 +388,9 @@ func GetMoveList(sort SortInput, pagination Pagination) (int, []models.NamedReso
 
 // GetMove fetches a move entry, its type and all pokemon learning it from the database by its ID or name.
 func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedResourceID, pokemon []models.MovePokemonID, err error) {
+	if dbpool == nil {
+		return move, moveType, nil, errors.New("database connection not initialized")
+	}
 	var rows pgx.Rows
 	// Use different query depending on search type
 	if input.SearchType == ID {
@@ -420,6 +448,9 @@ func GetMove(input SearchInput) (move models.AttackMove, moveType models.NamedRe
 
 // GetPokemonList fetches a slice of all pokemon entries from the database.
 func GetPokemonList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var pokemonList []models.NamedResourceID
 	queryString := buildQuery("SELECT dex_number, pokemon_name FROM pokemon", sort, "dex_number", "pokemon_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -446,6 +477,9 @@ func GetPokemonList(sort SortInput, pagination Pagination) (int, []models.NamedR
 
 // GetMove fetches a move entry, its type and all pokemon learning it from the database by its ID or name.
 func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedResourceID, abilities []models.NamedResourceID, dungeons []models.PokemonDungeonID, moves []models.PokemonMoveID, types []models.NamedResourceID, err error) {
+	if dbpool == nil {
+		return pokemon, camp, nil, nil, nil, nil, errors.New("database connection not initialized")
+	}
 	// Create a pgx.Rows variable for each query to be executed
 	var rows [4]pgx.Rows
 	// Create an errgroup.Group to wait until the goroutines have finished
@@ -598,6 +632,9 @@ func GetPokemon(input SearchInput) (pokemon models.Pokemon, camp models.NamedRes
 
 // GetPokemonTypeList fetches a slice of all pokemon_type entries from the database.
 func GetPokemonTypeList(sort SortInput, pagination Pagination) (int, []models.NamedResourceID, error) {
+	if dbpool == nil {
+		return 0, nil, errors.New("database connection not initialized")
+	}
 	var pokemonTypes []models.NamedResourceID
 	queryString := buildQuery("SELECT * FROM pokemon_type", sort, "type_ID", "type_name", pagination)
 	rows, err := dbpool.Query(context.Background(), queryString)
@@ -624,6 +661,9 @@ func GetPokemonTypeList(sort SortInput, pagination Pagination) (int, []models.Na
 
 // GetPokemonType fetches a pokemonType entry and its type interactions from the database by its ID or name.
 func GetPokemonType(input SearchInput) (pokemonType models.PokemonType, interactions []models.TypeInteractionID, err error) {
+	if dbpool == nil {
+		return pokemonType, nil, errors.New("database connection not initialized")
+	}
 	var rows pgx.Rows
 	// Use different query depending on search type
 	if input.SearchType == ID {
