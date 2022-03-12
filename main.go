@@ -93,6 +93,9 @@ func main() {
 	router.GET("/v1/types", resourceListMiddleware(handler.PokemonTypeListHandler))
 	router.GET("/v1/types/:searcharg", defaultMiddleware(handler.PokemonTypeSearchHandler))
 
+	// Overwrite the default NotFound handler to log 404 requests
+	router.NotFound = http.HandlerFunc(handler.Default404Handler)
+
 	// Start the server with the created router and specified port
 	fmt.Printf("pmd-dx-api listening on port %v\n", port)
 	http.ListenAndServe(":"+port, router)

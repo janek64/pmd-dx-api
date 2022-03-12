@@ -40,6 +40,18 @@ type FieldLimitingParams struct {
 	Fields               []string
 }
 
+// Default404Handler handles requests on all undefined routes. It sets the status to 404
+// (Not Found) and logs the request to the access log.
+func Default404Handler(w http.ResponseWriter, r *http.Request) {
+	responseRecorder := logger.LogResponseRecorder{ResponseWriter: w}
+	responseRecorder.WriteHeader(http.StatusNotFound)
+	// Set the headers like in http.Error()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	responseRecorder.Write([]byte("404 page not found"))
+	logger.LogRequest(r, responseRecorder)
+}
+
 // ErrorAndLog500 is a wrapper around http.Error() that
 // writes the error message to the error log instead of returning
 // it to the client. Should only be used for internal server errors.
