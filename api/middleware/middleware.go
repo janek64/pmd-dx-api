@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
+	"github.com/janek64/pmd-dx-api/api/cache"
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
 	"github.com/janek64/pmd-dx-api/api/logger"
@@ -74,11 +76,61 @@ func FieldLimitingParams(h httprouter.Handle) httprouter.Handle {
 // LogRequest logs the request with the logger package by using a custom http.ResponseWriter.
 func LogRequest(h httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		responseRecorder := logger.ResponseRecorder{ResponseWriter: w, Status: 200, Size: 0}
+		responseRecorder := logger.LogResponseRecorder{ResponseWriter: w}
 		h(&responseRecorder, r, ps)
 		err := logger.LogRequest(r, responseRecorder)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Writing to the access log failed: %v", err)
+		}
+	}
+}
+
+// CacheResponse tries to fetch the response for the requested URL from
+// the redis instance and returns it if it exists. If there is no cache entry,
+// it will record the json and headers of the generated response and store
+// them in the redis cache if the status code is 200.
+func CacheResponse(h httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// Try to get the response from the redis cache
+		header, json, err := cache.GetCachedResponse(r.URL.String())
+		// If no error was provided, respond with the cache result
+		if err == nil {
+			for k, v := range header {
+				w.Header().Set(k, v[0])
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write(json)
+			return
+		} else {
+			// If the error is a CacheMissError, proceed and process the request
+			if _, ok := err.(*cache.CacheMissError); !ok {
+				// Log the error to the error log
+				pc, file, line, ok := runtime.Caller(0)
+				if !ok {
+					fmt.Fprintf(os.Stderr, "CacheResponse: failed to fetch caller information")
+					return
+				}
+				caller := logger.CallerInformation{Pc: pc, File: file, Line: line}
+				logger.LogError(err, caller)
+				return
+			}
+		}
+		// Create a CacheResponseRecorder to record the json and status code
+		responseRecorder := cache.CacheResponseRecorder{ResponseWriter: w}
+		h(&responseRecorder, r, ps)
+		// Write the generated response into the redis cache if it is code 200
+		if responseRecorder.Status == 200 {
+			err = cache.StoreResponse(r.URL.String(), responseRecorder.Header(), responseRecorder.Json)
+			if err != nil {
+				// Log the error to the error log
+				pc, file, line, ok := runtime.Caller(0)
+				if !ok {
+					fmt.Fprintf(os.Stderr, "CacheResponse: failed to fetch caller information")
+					return
+				}
+				caller := logger.CallerInformation{Pc: pc, File: file, Line: line}
+				logger.LogError(err, caller)
+			}
 		}
 	}
 }

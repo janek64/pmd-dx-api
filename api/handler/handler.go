@@ -139,6 +139,7 @@ func answerWithListJSON(count int, resources []models.NamedResourceID, resourceT
 	w.Header().Set("Link", linkHeader)
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -254,6 +255,7 @@ func AbilitySearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -316,6 +318,7 @@ func CampSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -384,6 +387,7 @@ func DungeonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -454,6 +458,7 @@ func MoveSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -534,6 +539,7 @@ func PokemonSearchHandler(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }
 
@@ -596,5 +602,6 @@ func PokemonTypeSearchHandler(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 	// Write the response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	w.Write(json)
 }

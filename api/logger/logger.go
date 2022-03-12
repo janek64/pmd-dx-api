@@ -66,28 +66,28 @@ func CloseLogger() error {
 	return nil
 }
 
-// ResponseRecorder is a custom http.ResponseWriter recording status and body size
+// LogResponseRecorder is a custom http.ResponseWriter recording status and body size
 // of a HTTP response for logging purposes.
-type ResponseRecorder struct {
+type LogResponseRecorder struct {
 	http.ResponseWriter
 	Status int
 	Size   int
 }
 
 // WriteHeader - implementation of http.ResponseWriter interface storing the status code.
-func (r *ResponseRecorder) WriteHeader(status int) {
-	r.Status = status
-	r.ResponseWriter.WriteHeader(status)
+func (l *LogResponseRecorder) WriteHeader(status int) {
+	l.Status = status
+	l.ResponseWriter.WriteHeader(status)
 }
 
 // Write - implementation of http.ResponseWriter interface storing the body size.
-func (r *ResponseRecorder) Write(b []byte) (int, error) {
-	r.Size = len(b)
-	return r.ResponseWriter.Write(b)
+func (l *LogResponseRecorder) Write(b []byte) (int, error) {
+	l.Size = len(b)
+	return l.ResponseWriter.Write(b)
 }
 
 // LogRequest logs a HTTP request and the data of the ResponseRecorder to the accessLogger.
-func LogRequest(request *http.Request, response ResponseRecorder) error {
+func LogRequest(request *http.Request, response LogResponseRecorder) error {
 	if accessLogger == nil {
 		return errors.New("access logger not initialized")
 	}

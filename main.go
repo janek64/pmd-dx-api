@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/janek64/pmd-dx-api/api/cache"
 	"github.com/janek64/pmd-dx-api/api/db"
 	"github.com/janek64/pmd-dx-api/api/handler"
 	"github.com/janek64/pmd-dx-api/api/logger"
@@ -24,6 +25,7 @@ func getEnv(key string, defaultValue string) string {
 }
 
 func main() {
+
 	// Initialize the logger
 	err := logger.InitLogger()
 	if err != nil {
@@ -48,6 +50,21 @@ func main() {
 		}
 	}()
 
+	// Initialize the redis connection
+	err = cache.InitRedis()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to redis: %v\n", err)
+		os.Exit(1)
+	}
+	// Close the redis connection when exiting the program
+	defer func() {
+		err = cache.CloseRedis()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to close redis connection: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
 	// Get port from environment
 	port := getEnv("PORT", "3000")
 
@@ -56,7 +73,7 @@ func main() {
 
 	// Define the middleware chains
 	defaultMiddleware := func(h httprouter.Handle) httprouter.Handle {
-		return middleware.LogRequest(middleware.FieldLimitingParams(h))
+		return middleware.LogRequest(middleware.CacheResponse(middleware.FieldLimitingParams(h)))
 	}
 	resourceListMiddleware := func(h httprouter.Handle) httprouter.Handle {
 		return defaultMiddleware(middleware.ResourceListParams(h))
