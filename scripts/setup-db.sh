@@ -12,8 +12,12 @@ then
 	exit 1;
 fi
 
-export PGHOST=$1
-export PGPORT=$2
+# check if the ignore host command was added (necessary for compose setup)
+if [ "$7" != "--ignore-host"];
+then
+  export PGHOST=$1
+  export PGPORT=$2
+fi
 export PGDATABASE=$3
 export PGUSER=$4
 export PGPASSWORD=$5
@@ -26,15 +30,15 @@ psql -f create-tables.sql;
 echo "Done.";
 
 echo "Importing data from .csv files...";
-psql -c "\copy camp FROM '%DATAPATH%\camp.csv' CSV HEADER";
-psql -c "\copy pokemon_type FROM '%DATAPATH%\pokemon_type.csv' CSV HEADER";
-psql -c "\copy ability FROM '%DATAPATH%\ability.csv' CSV HEADER";
-psql -c "\copy attack_move FROM '%DATAPATH%\attack_move.csv' CSV HEADER";
-psql -c "\copy dungeon FROM '%DATAPATH%\dungeon.csv' CSV HEADER";
-psql -c "\copy pokemon FROM '%DATAPATH%\pokemon.csv' CSV HEADER";
-psql -c "\copy effectiveness FROM '%DATAPATH%\effectiveness.csv' CSV HEADER";
-psql -c "\copy encountered_in FROM '%DATAPATH%\encountered_in.csv' CSV HEADER";
-psql -c "\copy learns FROM '%DATAPATH%\learns.csv' CSV HEADER";
-psql -c "\copy pokemon_has_ability FROM '%DATAPATH%\pokemon_has_ability.csv' CSV HEADER";
-psql -c "\copy pokemon_has_type FROM '%DATAPATH%\pokemon_has_type.csv' CSV HEADER";
+psql -c "\copy camp FROM '${DATAPATH}/camp.csv' CSV HEADER";
+psql -c "\copy pokemon_type FROM '${DATAPATH}/pokemon_type.csv' CSV HEADER";
+psql -c "\copy ability FROM '${DATAPATH}/ability.csv' CSV HEADER";
+psql -c "\copy attack_move FROM '${DATAPATH}/attack_move.csv' CSV HEADER";
+psql -c "\copy dungeon FROM '${DATAPATH}/dungeon.csv' CSV HEADER";
+psql -c "\copy pokemon FROM '${DATAPATH}/pokemon.csv' CSV HEADER";
+psql -c "\copy effectiveness FROM '${DATAPATH}/effectiveness.csv' CSV HEADER";
+psql -c "\copy encountered_in FROM '${DATAPATH}/encountered_in.csv' CSV HEADER";
+psql -c "\copy learns FROM '${DATAPATH}/learns.csv' CSV HEADER";
+psql -c "\copy pokemon_has_ability FROM '${DATAPATH}/pokemon_has_ability.csv' CSV HEADER";
+psql -c "\copy pokemon_has_type FROM '${DATAPATH}/pokemon_has_type.csv' CSV HEADER";
 echo "Done.";

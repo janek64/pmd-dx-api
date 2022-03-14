@@ -1,0 +1,62 @@
+version: '3'
+
+volumes:
+    # Store postgres data in a docker volume
+    postgres:
+    # Store the logs from the api in a docker volume
+    api_logs:
+
+services:
+    # Postgres database for the api
+    postgres:
+        image: postgres:latest
+        container_name: pmd-dx-api_postgres            
+        environment:
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+            - POSTGRES_DB=${DB_NAME}
+        volumes:
+            # Store the postgres data in a docker volume
+            - postgres:/var/lib/postgresql/data
+            # Copy the pokemon data to the container
+            - ./data:/pokemon-data
+            # Copy the db setup script to the container
+            - ./scripts/setup-db.sh:/setup-db.sh
+            - ./scripts/create-tables.sql:/create-tables.sql
+            # Use a custom initialization script
+            - ./scripts/init-db-compose.sh:/docker-entrypoint-initdb.d/init.sh
+        restart: always
+    
+    # redis instance for caching
+    redis:
+        image: redis:latest
+        container_name: pmd-dx-api_redis
+        # set the password for accessing redis
+        command: >
+          --requirepass ${REDIS_PASSWORD}
+        restart: always
+    
+    # pmd-dx-api
+    api:
+        build: .
+        container_name: pmd-dx-api
+        # Wait until the postgres server is ready before starting the api
+        command: bash -c 'while !</dev/tcp/postgres/5432; do sleep 10; done; ./pmd-dx-api'
+        environment:
+            - DB_USER=${DB_USER}
+            - DB_PASSWORD=${DB_PASSWORD}
+            - DB_URL=postgres:5432
+            - DB_NAME=${DB_NAME}
+            - REDIS_URL=redis:6379
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+            - PORT=${PORT}
+            - LOG_PATH=/var/logs/pmd-dx-api/
+        volumes:
+            - api_logs:/var/logs/pmd-dx-api
+        # Use the port provided from the environment
+        ports:
+            - ${PORT}:${PORT}
+        depends_on:
+            - postgres
+            - redis
+        restart: always
