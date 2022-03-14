@@ -124,3 +124,16 @@ CREATE TABLE effectiveness (
 ALTER TABLE pokemon ADD COLUMN camp_id smallint NOT NULL REFERENCES camp (camp_ID);
 
 ALTER TABLE attack_move ADD COLUMN type_ID smallint NOT NULL REFERENCES pokemon_type (type_ID);
+
+-- Create indices for all name columns to speed upd searches
+CREATE INDEX camp_name_idx ON camp (camp_name);
+
+CREATE INDEX pokemon_name_id ON pokemon (pokemon_name);
+
+CREATE INDEX type_name_idx ON pokemon_type (type_name);
+
+CREATE INDEX move_name_index ON attack_move (move_name);
+
+CREATE INDEX ability_name_idx ON ability (ability_name);
+
+CREATE INDEX dungeon_name_idx ON dungeon (dungeon_name);
